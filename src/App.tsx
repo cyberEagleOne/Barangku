@@ -8,6 +8,8 @@ import Auth, { ForgotPassword, isProtectedRoute, isTechnicianRoute, safeReturnRo
 import MyOrders, { type ListedOrder } from './MyOrders';
 import Home from './Home';
 import { initialOrders, toBookingOrder, type DemoOrder } from './orderState';
+import UntukTukang from './UntukTukang';
+import DaftarTukang from './DaftarTukang';
 
 const technicians: Technician[] = [
   { ...defaultTechnician, devices: ['Laptop'] },
@@ -132,24 +134,8 @@ export default function App() {
   else if (page === 'lupa-sandi') content = <ForgotPassword key={route} next={next} />;
   else if (page === 'pesanan-saya') content = <MyOrders key={user?.name} orders={samples} fresh={!!user?.fresh && !orders.filter(o => !o.incoming).length} navigate={go} />;
   else if (page === 'profil') content = <main className="container placeholder-page profile-page"><h1>Profil kamu</h1><div className="order-summary"><h2>{user?.name}</h2><p>{user?.contact}</p><p className="small-text">Akun demo · {user?.role === 'tukang' ? 'Tukang servis' : 'Pelanggan'}</p><Button variant="secondary" onClick={logout}>Keluar</Button></div></main>;
-  else if (page === 'untuk-tukang') content = (
-    <main className="container placeholder-page">
-      <div className="eyebrow"><span className="eyebrow-line" /> GABUNG BARANGKU</div>
-      <h1>Untuk Tukang</h1>
-      <p>Dapatkan pelanggan baru di sekitar tokomu tanpa biaya pendaftaran.</p>
-      <Button onClick={() => go('daftar-tukang')}>Daftar jadi tukang <ArrowRight size={18} /></Button>
-    </main>
-  );
-  else if (page === 'daftar-tukang') content = (
-    <main className="container placeholder-page">
-      <div className="eyebrow"><span className="eyebrow-line" /> DARI TANGERANG, BANTU TETANGGA</div>
-      <h1>Daftar jadi tukang</h1>
-      <p>{user?.name ? `Halo, ${user.name}. ` : ''}Formulir data toko dan jenis servis akan segera tersedia di sini.</p>
-      <Button className="tech-button" onClick={() => go(user?.role === 'tukang' ? 'dashboard-tukang' : 'daftar')}>
-        {user?.role === 'tukang' ? 'Buka Dashboard Tukang' : 'Lanjut daftar jadi tukang'}<ArrowRight size={20} />
-      </Button>
-    </main>
-  );
+  else if (page === 'untuk-tukang') content = <UntukTukang navigate={go} />;
+  else if (page === 'daftar-tukang') content = <DaftarTukang user={user} onLogin={login} navigate={go} />;
   else if (page === 'dashboard-tukang') content = (
     <main className="container placeholder-page">
       <div className="eyebrow"><span className="eyebrow-line" /> PANEL TEKNISI</div>

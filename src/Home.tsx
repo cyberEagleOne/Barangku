@@ -181,7 +181,7 @@ export default function Home({ technicians, navigate }: { technicians: Technicia
           <h2>Kamu tukang servis? Gabung barangku</h2>
           <p>Bantu tetangga di sekitarmu dan kembangkan tokomu tanpa biaya pendaftaran.</p>
         </div>
-        <Button className="tech-cta-btn" onClick={() => navigate('daftar-tukang')}>
+        <Button className="tech-cta-btn" onClick={() => navigate('untuk-tukang')}>
           Daftar jadi tukang <ArrowRight size={20} />
         </Button>
       </section>
