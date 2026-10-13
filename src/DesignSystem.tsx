@@ -49,7 +49,7 @@ export function TechnicianCard({ technician = defaultTechnician, selected: contr
 export function Footer({ onLink }: { onLink: (label: string) => void }) {
   return <footer><div className="container footer-grid"><div className="footer-brand"><img src="/logo-barangku.png" alt="Logo asli Barangku" /><p>Rusak? Benerin dulu,<br />jangan buang.</p></div>{[['Jelajahi', 'Cari tukang', 'Cara kerja', 'Jadi tukang'], ['Bantuan', 'Pertanyaan umum', 'Panduan perbaikan', 'Syarat & ketentuan'], ['Hubungi kami', 'Halo, barangku', 'Tangerang, Indonesia']].map(([title, ...links]) => <div key={title}><strong>{title}</strong>{links.map(link => <button key={link} onClick={() => onLink(link)}>{link}</button>)}</div>)}</div><div className="container copyright"><span>© 2026 Barangku. Dari Tangerang buat semua orang.</span><span>Dibikin dengan niat baik.</span></div></footer>;
 }
-export function Navbar({ user, onLogout }: { user?: { name: string } | null; onLogout?: () => void }) {
+export function Navbar({ user, onLogout }: { user?: { name: string; role?: 'pelanggan' | 'tukang' } | null; onLogout?: () => void }) {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
@@ -62,9 +62,22 @@ export function Navbar({ user, onLogout }: { user?: { name: string } | null; onL
     return () => { document.removeEventListener('pointerdown', pointer); document.removeEventListener('keydown', escape); window.removeEventListener('hashchange', close); };
   }, []);
   const navigate = (path: string) => { location.hash = path; close(); };
-  return <header className="site-header product-header"><div className="container navbar-demo"><a href="#beranda" aria-label="Ke beranda barangku"><img src="/logo-barangku.png" alt="Logo asli Barangku" /></a><nav className={`demo-links ${open ? 'expanded' : ''}`} aria-label="Navigasi utama"><a href="#beranda" onClick={close}>Cara Kerja</a><a href="#daftar-tukang" onClick={close}>Untuk Tukang</a>{user ? <><a href="#pesanan-saya" onClick={close}>Pesanan saya</a><div className="account-control" ref={accountRef}><Button variant="ghost" className="account-avatar" aria-label={`Buka menu akun ${user.name}`} aria-expanded={accountOpen} aria-controls="account-options" onClick={() => setAccountOpen(!accountOpen)}>{user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}</Button>{accountOpen && <div id="account-options" className="account-menu"><strong>{user.name}</strong><Button variant="ghost" onClick={() => navigate('pesanan-saya')}>Pesanan saya</Button><Button variant="ghost" onClick={() => navigate('profil')}>Profil</Button><Button variant="ghost" onClick={() => { close(); onLogout?.(); }}>Keluar</Button></div>}</div><div className="mobile-account-links"><Button variant="ghost" onClick={() => navigate('profil')}>Profil</Button><Button variant="ghost" onClick={() => { close(); onLogout?.(); }}>Keluar</Button></div></> : <><Button variant="secondary" onClick={() => navigate('masuk')}>Masuk</Button><Button onClick={() => navigate('daftar')}>Daftar</Button></>}</nav><Button className="demo-hamburger" variant="ghost" aria-label={open ? 'Tutup menu' : 'Buka menu'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</Button></div></header>;
+  const onCaraKerja = (e: React.MouseEvent) => {
+    e.preventDefault();
+    close();
+    const currentRoute = location.hash.replace(/^#/, '').split('?')[0];
+    if (currentRoute === 'beranda') {
+      document.getElementById('cara-kerja')?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      location.hash = 'beranda';
+      setTimeout(() => {
+        document.getElementById('cara-kerja')?.scrollIntoView({ behavior: 'smooth' });
+      }, 120);
+    }
+  };
+  return <header className="site-header product-header"><div className="container navbar-demo"><a href="#beranda" aria-label="Ke beranda barangku"><img src="/logo-barangku.png" alt="Logo asli Barangku" /></a><nav className={`demo-links ${open ? 'expanded' : ''}`} aria-label="Navigasi utama"><a href="#cara-kerja" onClick={onCaraKerja}>Cara Kerja</a><a href="#untuk-tukang" onClick={close}>Untuk Tukang</a>{user ? <>{user.role === 'tukang' ? <a href="#dashboard-tukang" onClick={close}>Pesanan masuk</a> : <a href="#pesanan-saya" onClick={close}>Pesanan saya</a>}<div className="account-control" ref={accountRef}><Button variant="ghost" className="account-avatar" aria-label={`Buka menu akun ${user.name}`} aria-expanded={accountOpen} aria-controls="account-options" onClick={() => setAccountOpen(!accountOpen)}>{user.name.split(/\s+/).filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()}</Button>{accountOpen && <div id="account-options" className="account-menu"><strong>{user.name}</strong>{user.role === 'tukang' ? <><Button variant="ghost" onClick={() => navigate('dashboard-tukang')}>Pesanan masuk</Button><Button variant="ghost" onClick={() => { close(); onLogout?.(); }}>Keluar</Button></> : <><Button variant="ghost" onClick={() => navigate('pesanan-saya')}>Pesanan saya</Button><Button variant="ghost" onClick={() => navigate('profil')}>Profil</Button><Button variant="ghost" onClick={() => { close(); onLogout?.(); }}>Keluar</Button></>}</div>}</div><div className="mobile-account-links">{user.role === 'tukang' ? <Button variant="ghost" onClick={() => navigate('dashboard-tukang')}>Pesanan masuk</Button> : <Button variant="ghost" onClick={() => navigate('profil')}>Profil</Button>}<Button variant="ghost" onClick={() => { close(); onLogout?.(); }}>Keluar</Button></div></> : <><Button variant="secondary" onClick={() => navigate('masuk')}>Masuk</Button><Button onClick={() => navigate('daftar')}>Daftar</Button></>}</nav><Button className="demo-hamburger" variant="ghost" aria-label={open ? 'Tutup menu' : 'Buka menu'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</Button></div></header>;
 }
-function App() {
+function DesignSystemShowcase() {
   const [active, setActive] = useState(0);
   const [menu, setMenu] = useState(false);
   const [chips, setChips] = useState(['Semua']);
@@ -104,4 +117,4 @@ function App() {
     {notice && <div className="toast" role="status"><Check size={20} /><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Tutup pemberitahuan"><X size={18} /></button></div>}
   </div>;
 }
-export default App;
+export default DesignSystemShowcase;
