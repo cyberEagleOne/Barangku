@@ -120,13 +120,13 @@
 @media(max-width:600px){
   .untuk-tukang-page{padding-top:24px;padding-bottom:48px}
   .tech-hero-content h1{font-size:32px;line-height:40px;letter-spacing:-1px}
-  .daftar-tukang-page{padding-top:24px;padding-bottom:110px}
+  .daftar-tukang-page{padding-top:24px;padding-bottom:calc(112px + env(safe-area-inset-bottom))}
   .daftar-tukang-header h1{font-size:28px;line-height:36px}
   .daftar-tukang-header{text-align:left;margin-bottom:24px}
   .tech-form-card{padding:20px 16px;box-shadow:none;border-radius:12px}
   .desktop-actions{display:none!important}
   .tech-mobile-bar{display:flex!important;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px calc(12px + env(safe-area-inset-bottom));gap:12px;z-index:30;box-shadow:var(--shadow)}
-  .tech-mobile-bar .tech-button{flex:1;min-height:56px!important;font-size:16px!important;padding:0 12px!important}
+  .tech-mobile-bar .tech-button{flex:1;min-height:64px!important;font-size:18px!important;padding:0 16px!important}
   .tech-confirm-card{padding:24px 16px;margin:16px auto}
   .tech-confirm-card h1{font-size:24px;line-height:32px}
 }
@@ -266,4 +266,31 @@
   .modal-actions{grid-template-columns:1fr}
   .modal-actions .button{min-height:64px!important;font-size:18px!important}
 }
+
+/* Stage 4 Responsive Pass Refinements */
+html,body{overflow-x:hidden;max-width:100vw}
+h1,h2,h3,p,span,blockquote,dt,dd{overflow-wrap:break-word}
+
+.site-header{position:relative;z-index:40}
+.demo-hamburger{min-width:48px;min-height:48px;display:none;align-items:center;justify-content:center;padding:0;border-radius:12px}
+
+.my-order-note{font-size:13px;line-height:20px;color:var(--text-secondary);background:var(--primary-tint);padding:10px 14px;border-radius:8px;margin-bottom:12px;overflow-wrap:anywhere}
+.my-order-note strong{color:var(--primary-dark)}
+.my-order-estimate{font-size:13px;color:var(--text-secondary);margin-bottom:16px}
+.my-order-estimate strong{color:var(--text)}
+
+.tech-back-link{min-height:48px;display:inline-flex;align-items:center}
+.modal-content{max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow-y:auto}
+
+@media(max-width:600px){
+  .demo-hamburger{display:inline-flex!important}
+  .product-header .demo-links.expanded{display:flex;position:absolute;top:80px;left:0;right:0;padding:20px 16px 24px;background:var(--surface);flex-direction:column;align-items:stretch;gap:12px;border-bottom:1px solid var(--border);z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+  .product-header .demo-links.expanded a{min-height:48px;font-size:16px;font-weight:600;display:flex;align-items:center;padding:0 12px;border-radius:10px}
+  .product-header .demo-links.expanded a:hover{background:var(--primary-tint)}
+  .product-header .demo-links.expanded .button{width:100%;min-height:48px;font-size:16px}
+  .mobile-account-links{display:flex;flex-direction:column;gap:8px;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)}
+  .mobile-account-links .button{min-height:48px;font-size:16px;justify-content:flex-start;padding:0 12px}
+  .container{max-width:calc(100vw - 32px)}
+}
+
 
