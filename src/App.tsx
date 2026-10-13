@@ -33,7 +33,47 @@ function SearchResults() {
   const [selected, setSelected] = useState<number | null>(1);
   const [showMap, setShowMap] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const visible = technicians.filter(t => (!chosenFilters.includes('Laptop') || t.devices.includes('Laptop')) && (!chosenFilters.includes('HP') || t.devices.includes('HP')) && (!chosenFilters.includes('Terverifikasi') || t.verified) && (!chosenFilters.includes('Buka sekarang') || t.status === 'open')).sort((a, b) => sort === 'rating' ? Number(b.rating.replace(',', '.')) - Number(a.rating.replace(',', '.')) : sort === 'price' ? a.min - b.min : a.distance - b.distance);
+  const [techList, setTechList] = useState<Technician[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError('');
+    searchTechnicians({ filters: chosenFilters, sort })
+      .then(res => {
+        if (!isMounted) return;
+        setTechList(res);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError('Ada yang salah. Coba lagi ya.');
+        setLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [chosenFilters, sort]);
+
+  if (loading) {
+    return (
+      <main className="container results-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container results-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
+
+  const visible = techList;
   const current = visible.find(t => t.id === selected);
   const toggle = (label: string) => {
     const next = label === 'Semua' ? [] : chosenFilters.includes(label) ? chosenFilters.filter(f => f !== label) : [...chosenFilters, label];
@@ -179,14 +219,12 @@ export default function App() {
     </main>
   );
   else if (page === 'lupa-sandi') content = <ForgotPassword key={route} next={next} />;
-  else if (page === 'pesanan-saya') content = <MyOrders key={user?.name} orders={samples} fresh={!!user?.fresh && !orders.filter(o => !o.incoming).length} navigate={go} />;
+  else if (page === 'pesanan-saya') content = <MyOrders key={user?.name} fresh={!!user?.fresh && !orders.filter(o => !o.incoming).length} navigate={go} />;
   else if (page === 'profil') content = <main className="container placeholder-page profile-page"><h1>Profil kamu</h1><div className="order-summary"><h2>{user?.name}</h2><p>{user?.contact}</p><p className="small-text">Akun demo · {user?.role === 'tukang' ? 'Tukang servis' : 'Pelanggan'}</p><Button variant="secondary" onClick={logout}>Keluar</Button></div></main>;
   else if (page === 'untuk-tukang') content = <UntukTukang navigate={go} />;
   else if (page === 'daftar-tukang') content = <DaftarTukang user={user} onLogin={login} navigate={go} />;
   else if (page === 'dashboard-tukang') content = (
     <DashboardTukang
-      orders={orders}
-      shopStatus={shopStatus}
       onStatusChange={setShopStatus}
       onAccept={handleAcceptOrder}
       onReject={handleRejectOrder}
@@ -197,17 +235,17 @@ export default function App() {
     const code = page.split('/')[1];
     content = (
       <PesananTukang
+        key={route}
         code={code}
-        orders={orders}
         onUpdateOrder={handleUpdateOrder}
         navigate={go}
       />
     );
   }
-  else if (page === 'beranda' || page === 'cara-kerja') content = <Home technicians={technicians} navigate={go} />;
-  else if (page.startsWith('detail/')) content = <TechnicianDetail key={route} technician={technicians.find(t => t.id === Number(page.split('/')[1]))} navigate={go} />;
+  else if (page === 'beranda' || page === 'cara-kerja') content = <Home navigate={go} />;
+  else if (page.startsWith('detail/')) content = <TechnicianDetail key={route} id={Number(page.split('/')[1])} technician={technicians.find(t => t.id === Number(page.split('/')[1]))} navigate={go} />;
   else if (page.startsWith('pesan/')) content = <Booking key={route} technician={technicians.find(t => t.id === Number(page.split('/')[1]))} navigate={go} onComplete={handleBookingComplete} />;
-  else if (page.startsWith('lacak/')) content = <Tracking key={`${route}-${trackingStep}`} order={trackingOrder} initialStep={trackingStep} code={page.split('/')[1]} navigate={go} />;
+  else if (page.startsWith('lacak/')) content = <Tracking key={route} code={page.split('/')[1]} navigate={go} />;
   else content = <SearchResults />;
 
   if (route === 'sistem-desain') return <DesignSystem />;

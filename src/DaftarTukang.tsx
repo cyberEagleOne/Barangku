@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, CircleAlert, Eye, EyeOff, Store, UploadCloud } from 'lucide-react';
-import { Button, Stepper, type DemoUser } from './DesignSystem';
+import { Button, Stepper } from './DesignSystem';
+import { registerTechnicianShop, type User } from './api';
 
 const STEPS = ['Data diri', 'Data toko', 'Jenis servis'];
 
@@ -31,13 +32,15 @@ export default function DaftarTukang({
   onLogin,
   navigate
 }: {
-  user: DemoUser | null;
-  onLogin: (account: DemoUser, destination: string) => void;
+  user: User | null;
+  onLogin: (account: User, destination: string) => void;
   navigate: (path: string) => void;
 }) {
   const [step, setStep] = useState(0);
   const [isDone, setIsDone] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const [formData, setFormData] = useState<FormData>({
     name: user?.name || '',
@@ -91,14 +94,32 @@ export default function DaftarTukang({
     return Object.keys(errs).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateCurrentStep()) return;
     if (step < 2) {
       setStep(step + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      setIsDone(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setSubmitting(true);
+      setApiError('');
+      try {
+        await registerTechnicianShop({
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          shopName: formData.shopName,
+          address: formData.address,
+          hours: formData.hours,
+          services: formData.services,
+          minPrice: formData.minPrice,
+        });
+        setIsDone(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        setApiError('Ada yang salah. Coba lagi ya.');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -112,9 +133,11 @@ export default function DaftarTukang({
   };
 
   const handleFinish = () => {
-    const tukangUser: DemoUser = {
+    const tukangUser: User = {
       name: formData.shopName || formData.name || 'Tukang Servis',
       contact: formData.phone || formData.email || '0812-0000-0000',
+      phone: formData.phone,
+      email: formData.email,
       fresh: true,
       role: 'tukang'
     };
@@ -369,24 +392,25 @@ export default function DaftarTukang({
           </section>
         )}
 
+        {apiError && <p className="error-text" role="alert"><CircleAlert size={14} />{apiError}</p>}
         {/* Desktop Buttons */}
         <div className="tech-form-actions desktop-actions">
-          <Button variant="secondary" className="tech-button" onClick={handleBack}>
+          <Button variant="secondary" className="tech-button" onClick={handleBack} disabled={submitting}>
             <ArrowLeft size={20} /> Kembali
           </Button>
-          <Button className="tech-button" onClick={handleNext}>
-            {step === 2 ? 'Selesai daftar' : 'Lanjut'} <ArrowRight size={20} />
+          <Button className="tech-button" onClick={handleNext} disabled={submitting}>
+            {submitting ? 'Memuat...' : step === 2 ? 'Selesai daftar' : 'Lanjut'} <ArrowRight size={20} />
           </Button>
         </div>
       </div>
 
       {/* Mobile Fixed Bottom Action Bar */}
       <div className="tech-mobile-bar">
-        <Button variant="secondary" className="tech-button" onClick={handleBack}>
+        <Button variant="secondary" className="tech-button" onClick={handleBack} disabled={submitting}>
           <ArrowLeft size={18} /> Kembali
         </Button>
-        <Button className="tech-button" onClick={handleNext}>
-          {step === 2 ? 'Selesai daftar' : 'Lanjut'} <ArrowRight size={18} />
+        <Button className="tech-button" onClick={handleNext} disabled={submitting}>
+          {submitting ? 'Memuat...' : step === 2 ? 'Selesai daftar' : 'Lanjut'} <ArrowRight size={18} />
         </Button>
       </div>
     </main>

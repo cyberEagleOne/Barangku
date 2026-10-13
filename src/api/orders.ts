@@ -9,8 +9,10 @@ export async function getOrder(code: string): Promise<Order | null> {
 }
 
 export async function getMyOrders(_userContact?: string): Promise<Order[]> {
-  // Returns customer orders
-  const list = inMemoryStore.orders.filter(o => !o.incoming);
+  // Returns customer orders (completed/accepted initial orders plus orders created by the customer)
+  const list = inMemoryStore.orders.filter(
+    o => !o.incoming || (o as any).isCustomerOrder
+  );
   return Promise.resolve([...list]);
 }
 
@@ -32,7 +34,7 @@ export async function createOrder(data: {
   const code = data.code || `BRK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
   const tech = data.technician || initialTechnicians[0];
 
-  const newOrder: Order = {
+  const newOrder: Order & { isCustomerOrder?: boolean } = {
     code,
     technician: tech,
     technicianId: tech.id,
@@ -52,6 +54,7 @@ export async function createOrder(data: {
     damage: data.details.problem,
     date: data.details.date,
     time: data.details.time,
+    isCustomerOrder: true,
   };
 
   inMemoryStore.orders = [newOrder, ...inMemoryStore.orders.filter(o => o.code !== code)];
@@ -75,9 +78,17 @@ export async function updateOrderStatus(
   }
 
   const existing = inMemoryStore.orders[orderIndex];
+  const newEstimateMin = details?.estimateMin !== undefined ? details.estimateMin : existing.estimateMin;
+  const newEstimateMax = details?.estimateMax !== undefined ? details.estimateMax : existing.estimateMax;
+
   const updated: Order = {
     ...existing,
     status,
+    technician: {
+      ...existing.technician,
+      min: newEstimateMin ?? existing.technician.min,
+      max: newEstimateMax ?? existing.technician.max,
+    },
     ...(details?.message !== undefined ? { message: details.message } : {}),
     ...(details?.estimateMin !== undefined ? { estimateMin: details.estimateMin } : {}),
     ...(details?.estimateMax !== undefined ? { estimateMax: details.estimateMax } : {}),

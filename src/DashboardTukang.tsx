@@ -1,41 +1,113 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, ChevronRight, Clock, Inbox, Laptop, Smartphone, Store, Wrench, X, XCircle } from 'lucide-react';
 import { Badge, Button } from './DesignSystem';
 import { repairSteps } from './Tracking';
-import type { DemoOrder, ShopStatus } from './orderState';
+import { acceptOrder, getShopStatus, getTechnicianOrders, rejectOrder, setShopStatus, type Order, type ShopStatus } from './api';
 
 export default function DashboardTukang({
-  orders,
-  shopStatus,
+  orders: propOrders,
+  shopStatus: propShopStatus,
   onStatusChange,
   onAccept,
   onReject,
   navigate
 }: {
-  orders: DemoOrder[];
-  shopStatus: ShopStatus;
-  onStatusChange: (status: ShopStatus) => void;
-  onAccept: (code: string) => void;
-  onReject: (code: string) => void;
+  orders?: Order[];
+  shopStatus?: ShopStatus;
+  onStatusChange?: (status: ShopStatus) => void;
+  onAccept?: (code: string) => void;
+  onReject?: (code: string) => void;
   navigate: (path: string) => void;
 }) {
+  const [orders, setOrders] = useState<Order[]>(propOrders ?? []);
+  const [shopStatus, setShopStatusState] = useState<ShopStatus>(propShopStatus ?? 'buka');
+  const [loading, setLoading] = useState(!propOrders);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [rejectModalCode, setRejectModalCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError('');
+    Promise.all([
+      getTechnicianOrders(),
+      getShopStatus()
+    ])
+      .then(([ordersRes, statusRes]) => {
+        if (!isMounted) return;
+        setOrders(ordersRes);
+        setShopStatusState(statusRes);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError('Ada yang salah. Coba lagi ya.');
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleStatusChange = async (status: ShopStatus) => {
+    try {
+      await setShopStatus(status);
+      setShopStatusState(status);
+      onStatusChange?.(status);
+    } catch {
+      setError('Ada yang salah. Coba lagi ya.');
+    }
+  };
+
+  const handleTerima = async (code: string) => {
+    setActionLoading(true);
+    try {
+      await acceptOrder(code);
+      onAccept?.(code);
+      navigate(`pesanan-tukang/${code}`);
+    } catch {
+      setError('Ada yang salah. Coba lagi ya.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectModalCode) return;
+    setActionLoading(true);
+    try {
+      await rejectOrder(rejectModalCode);
+      onReject?.(rejectModalCode);
+      setOrders(prev => prev.map(o => o.code === rejectModalCode ? { ...o, incoming: false, rejected: true, status: -1 } : o));
+      setRejectModalCode(null);
+    } catch {
+      setError('Ada yang salah. Coba lagi ya.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="container dashboard-tukang-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container dashboard-tukang-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
 
   const incomingOrders = orders.filter(o => o.incoming && !o.rejected && o.status !== -1);
   const activeOrders = orders.filter(o => !o.incoming && !o.rejected && o.status >= 1 && o.status < 5);
   const completedOrders = orders.filter(o => !o.incoming && !o.rejected && o.status === 5);
-
-  const handleTerima = (code: string) => {
-    onAccept(code);
-    navigate(`pesanan-tukang/${code}`);
-  };
-
-  const handleConfirmReject = () => {
-    if (rejectModalCode) {
-      onReject(rejectModalCode);
-      setRejectModalCode(null);
-    }
-  };
 
   return (
     <main className="container dashboard-tukang-page">
@@ -56,7 +128,7 @@ export default function DashboardTukang({
             type="button"
             className={`dash-status-btn status-buka ${shopStatus === 'buka' ? 'active' : ''}`}
             aria-pressed={shopStatus === 'buka'}
-            onClick={() => onStatusChange('buka')}
+            onClick={() => handleStatusChange('buka')}
           >
             {shopStatus === 'buka' ? <Check size={28} /> : <span className="status-dot green" />}
             <span>Buka</span>
@@ -66,7 +138,7 @@ export default function DashboardTukang({
             type="button"
             className={`dash-status-btn status-sibuk ${shopStatus === 'sibuk' ? 'active' : ''}`}
             aria-pressed={shopStatus === 'sibuk'}
-            onClick={() => onStatusChange('sibuk')}
+            onClick={() => handleStatusChange('sibuk')}
           >
             {shopStatus === 'sibuk' ? <Check size={28} /> : <span className="status-dot orange" />}
             <span>Sibuk</span>
@@ -76,7 +148,7 @@ export default function DashboardTukang({
             type="button"
             className={`dash-status-btn status-tutup ${shopStatus === 'tutup' ? 'active' : ''}`}
             aria-pressed={shopStatus === 'tutup'}
-            onClick={() => onStatusChange('tutup')}
+            onClick={() => handleStatusChange('tutup')}
           >
             {shopStatus === 'tutup' ? <Check size={28} /> : <span className="status-dot gray" />}
             <span>Tutup</span>
@@ -128,7 +200,7 @@ export default function DashboardTukang({
                 <div className="incoming-card-top">
                   <div className="incoming-card-title">
                     <span className="incoming-code">{ord.code}</span>
-                    <h3>{ord.device} · {ord.model}</h3>
+                    <h3>{ord.device || ord.details.device} · {ord.model || ord.details.model}</h3>
                   </div>
                   <span className="badge busy">Perlu konfirmasi</span>
                 </div>
@@ -136,15 +208,15 @@ export default function DashboardTukang({
                 <div className="incoming-card-details">
                   <div className="incoming-detail-row">
                     <span className="label">Keluhan:</span>
-                    <strong>{ord.damage}</strong>
+                    <strong>{ord.damage || ord.details.problem}</strong>
                   </div>
                   <div className="incoming-detail-row">
                     <span className="label">Pelanggan:</span>
-                    <span>{ord.customerName.split(' ')[0]}</span>
+                    <span>{(ord.customerName || 'Pelanggan').split(' ')[0]}</span>
                   </div>
                   <div className="incoming-detail-row">
                     <span className="label">Jadwal antar:</span>
-                    <span>{ord.time} · {ord.date}</span>
+                    <span>{ord.time || ord.details.time} · {ord.date || ord.details.date}</span>
                   </div>
                 </div>
 
@@ -154,12 +226,14 @@ export default function DashboardTukang({
                     variant="secondary"
                     className="tech-button"
                     onClick={() => setRejectModalCode(ord.code)}
+                    disabled={actionLoading}
                   >
                     <X size={20} /> Tolak
                   </Button>
                   <Button
                     className="tech-button"
                     onClick={() => handleTerima(ord.code)}
+                    disabled={actionLoading}
                   >
                     <Check size={20} /> Terima
                   </Button>
@@ -192,9 +266,9 @@ export default function DashboardTukang({
                     <span className="incoming-code">{ord.code}</span>
                     <Badge type={ord.status === 4 ? 'open' : 'busy'} label={repairSteps[ord.status]} />
                   </div>
-                  <h3>{ord.device} · {ord.model}</h3>
-                  <p className="active-damage">Keluhan: {ord.damage}</p>
-                  <p className="active-meta">Pelanggan: {ord.customerName} · Perkiraan: Rp {ord.estimateMin.toLocaleString('id-ID')} – Rp {ord.estimateMax.toLocaleString('id-ID')}</p>
+                  <h3>{ord.device || ord.details.device} · {ord.model || ord.details.model}</h3>
+                  <p className="active-damage">Keluhan: {ord.damage || ord.details.problem}</p>
+                  <p className="active-meta">Pelanggan: {ord.customerName || 'Pelanggan'} · Perkiraan: Rp {(ord.estimateMin ?? ord.technician.min).toLocaleString('id-ID')} – Rp {(ord.estimateMax ?? ord.technician.max).toLocaleString('id-ID')}</p>
                 </div>
                 <Button
                   className="tech-button active-card-btn"
@@ -219,12 +293,14 @@ export default function DashboardTukang({
                 variant="secondary"
                 className="tech-button"
                 onClick={() => setRejectModalCode(null)}
+                disabled={actionLoading}
               >
                 Batal
               </Button>
               <Button
                 className="tech-button tech-button-danger"
                 onClick={handleConfirmReject}
+                disabled={actionLoading}
               >
                 Ya, tolak pesanan
               </Button>

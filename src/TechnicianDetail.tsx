@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Clock, MapPin, MessageCircle, ShieldCheck, Star, Wrench, X, ChevronDown } from 'lucide-react';
-import { Badge, Button, ReviewItem, rupiah, type Review, type Technician } from './DesignSystem';
+import { Badge, Button, ReviewItem, rupiah } from './DesignSystem';
+import { getTechnician, getTechnicianReviews, type Review, type Technician } from './api';
 
 export const locations: Record<number, string> = {
   1: 'Jl. Imam Bonjol No. 24, Karawaci, Kota Tangerang',
@@ -10,17 +11,7 @@ export const locations: Record<number, string> = {
   5: 'Jl. Prambanan Raya No. 8, Cibodas, Kota Tangerang',
   6: 'Jl. Boulevard Gading Serpong No. 16, Tangerang',
 };
-function getReviews(t: Technician): Review[] {
-  const hp = t.devices.length === 1 && t.devices[0] === 'HP';
-  return [
-    { name: 'Rina Ayu', date: '2 minggu lalu', rating: 5, text: hp ? 'Layar HP retak akhirnya beres. Hasilnya rapi dan enak dipakai lagi. Biayanya dijelasin dari awal.' : 'Laptop yang tadinya mati total akhirnya nyala lagi. Kerusakannya dijelasin dengan sabar, biayanya juga sesuai perkiraan. Makasih ya!', service: hp ? 'Ganti layar HP' : 'Servis laptop mati total' },
-    { name: 'Andi Pratama', date: '3 minggu lalu', rating: 5, text: 'Nggak langsung disuruh ganti komponen. Dicek dulu, terus dikasih pilihan yang sesuai budget. Senang nemu tukang yang jujur dekat rumah.', service: hp ? 'Ganti baterai HP' : 'Ganti baterai laptop' },
-    { name: 'Dewi Lestari', date: '1 bulan lalu', rating: 4, text: 'Pengerjaannya rapi. Sempat mundur sehari karena antrean, tapi dikabarin dulu jadi nggak bingung nunggu.', service: hp ? 'Perbaikan konektor HP' : 'Pasang ulang sistem' },
-    { name: 'Fajar Ramadhan', date: '1 bulan lalu', rating: 5, text: 'Responsnya ramah dan penjelasannya gampang dimengerti. Barang dites bareng pas diambil. Sekarang sudah lancar lagi.', service: hp ? 'Servis HP' : 'Bersihkan laptop' },
-    { name: 'Siti Nurhaliza', date: '2 bulan lalu', rating: 5, text: 'Harga sesuai kesepakatan, nggak ada biaya tambahan mendadak. Terima kasih sudah bantu!', service: hp ? 'Ganti baterai HP' : 'Servis laptop' },
-    { name: 'Bayu Saputra', date: '2 bulan lalu', rating: 5, text: 'Lokasinya gampang dicari. Proses pengecekan jelas dan dikasih tahu dulu sebelum diperbaiki.', service: hp ? 'Servis HP' : 'Servis laptop' },
-  ];
-}
+
 function getPrices(t: Technician) {
   const laptop = [
     ['Servis laptop mati total', t.min, t.max],
@@ -37,12 +28,71 @@ function getPrices(t: Technician) {
   ];
   return [...(t.devices.includes('HP') ? hp : []), ...(t.devices.includes('Laptop') ? laptop : [])] as [string, number, number][];
 }
-export default function TechnicianDetail({ technician: t, navigate }: { technician?: Technician; navigate: (path: string) => void }) {
+
+export default function TechnicianDetail({
+  technician: propTechnician,
+  id,
+  navigate
+}: {
+  technician?: Technician;
+  id?: number;
+  navigate: (path: string) => void;
+}) {
+  const [tech, setTech] = useState<Technician | null>(propTechnician ?? null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(!propTechnician && !!id);
+  const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [sent, setSent] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const targetId = id ?? propTechnician?.id;
+    if (!targetId) return;
+
+    setLoading(!tech);
+    setError('');
+    Promise.all([
+      propTechnician ? Promise.resolve(propTechnician) : getTechnician(targetId),
+      getTechnicianReviews(targetId)
+    ])
+      .then(([tRes, rRes]) => {
+        if (!isMounted) return;
+        setTech(tRes);
+        setReviews(rRes);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError('Ada yang salah. Coba lagi ya.');
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, propTechnician]);
+
+  if (loading) {
+    return (
+      <main className="container detail-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container detail-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
+
+  const t = tech;
   if (!t) return <main className="container placeholder-page"><h1>Tukang belum ditemukan.</h1><p>Coba pilih tukang dari hasil pencarian ya.</p><Button onClick={() => navigate('hasil-pencarian')}><ArrowLeft size={18} /> Kembali ke pencarian</Button></main>;
-  const reviews = getReviews(t);
+
   const book = () => navigate(`pesan/${t.id}`);
   return <main className="container detail-page">
     <div className="breadcrumb"><a href="#beranda">Beranda</a><span>/</span><a href="#hasil-pencarian">Hasil pencarian</a><span>/</span><span>{t.name}</span></div>

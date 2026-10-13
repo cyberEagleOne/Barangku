@@ -1,14 +1,17 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleAlert, Clock, MapPin, MessageCircle, PackageCheck, Phone, ShieldCheck, Wrench, X } from 'lucide-react';
 import { Badge, Button, Chip, Stepper, TechnicianInfo, defaultTechnician, rupiah } from './DesignSystem';
-import { formatVisit, type Order } from './Booking';
+import { formatVisit } from './Booking';
 import { locations } from './TechnicianDetail';
+import { getOrder, type Order } from './api';
 
 export const repairSteps = ['Dipesan', 'Diterima', 'Dicek', 'Diperbaiki', 'Siap diambil', 'Selesai'];
 export const demoOrder: Order = {
   code: 'BRK-2026-0142', technician: defaultTechnician,
   details: { device: 'Laptop', model: 'ASUS VivoBook 14', problem: 'Baterai drop', notes: 'Cepat mati kalau tidak dicolok ke listrik.', date: '2026-10-20', time: '09:00' }, photoName: '',
+  status: 2
 };
+
 export function getRepairHistory(order: Order, current: number) {
   const date = new Date(`${order.details.date || '2026-10-20'}T${order.details.time || '09:00'}:00`);
   const descriptions = ['Pesanan kamu masuk. Tukang akan mengonfirmasi jadwalnya.', 'Perangkat kamu sudah diterima di toko.', 'Tukang mengecek kerusakan dan menyiapkan perkiraan biaya.', 'Perbaikan dimulai setelah biaya disepakati.', 'Perangkat sudah dites dan siap kamu ambil.', 'Perangkat sudah kamu ambil. Makasih sudah memilih memperbaiki!'];
@@ -17,6 +20,7 @@ export function getRepairHistory(order: Order, current: number) {
     return { label, description: descriptions[i], at: at.toISOString(), date: at.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), time: at.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), index: i };
   }).reverse();
 }
+
 export function TrackingContent({ order, current, contact, navigate }: { order: Order; current: number; contact: () => void; navigate: (path: string) => void }) {
   const { technician: t, details } = order;
   const history = getRepairHistory(order, current);
@@ -42,11 +46,57 @@ export function TrackingContent({ order, current, contact, navigate }: { order: 
       <section className="tracking-card estimate-card"><div className="tracking-card-heading"><div className="tracking-heading-icon"><CalendarDays size={20} /></div><h2>Perkiraan biaya dan selesai</h2></div><div className="repair-estimates"><div><small>{current === 5 ? 'Biaya servis contoh' : 'Perkiraan biaya'}</small><strong>{rupiah(t.min)} – {rupiah(t.max)}</strong><p>Biaya dikonfirmasi sebelum perbaikan.</p></div><div><small>{current >= 4 ? 'Perbaikan selesai' : 'Perkiraan selesai'}</small><strong>{estimate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong><p>{current >= 4 ? 'Sudah dites oleh tukang.' : `Sekitar pukul ${estimate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}</p></div></div>{current < 4 && <div className="estimate-note"><Clock size={16} /> Jadwal bisa berubah sesuai hasil pengecekan. Tukang akan kabari kamu.</div>}</section>
     </div><aside className="tracking-sidebar"><section className="tracking-card tracking-order"><h2>Pesanan kamu</h2><TechnicianInfo technician={t} verification /><dl className="summary-data"><div><dt>Perangkat kamu</dt><dd>{details.device} · {details.model}</dd></div><div><dt>Kerusakan</dt><dd>{details.problem}</dd></div><div><dt>Tanggal antar ke toko</dt><dd>{formatVisit(details)}</dd></div></dl><Button className="w-full tracking-desktop-contact" onClick={contact}><MessageCircle size={18} /> Hubungi tukang</Button><Button className="w-full" variant="ghost" onClick={() => navigate(`detail/${t.id}`)}>Lihat detail tukang <ArrowRight size={16} /></Button><p className="tracking-contact-note">Ada yang mau ditanya?<br />Tukangnya siap bantu kamu.</p></section><div className="tracking-peace"><ShieldCheck size={20} /><p>Barang kamu, keputusan kamu.<br />Biaya tambahan harus kamu setujui dulu.</p></div></aside></div><div className="tracking-mobile-bar"><Button className="w-full" onClick={contact}><MessageCircle size={18} /> Hubungi tukang</Button></div></>;
 }
-export default function Tracking({ order, code, navigate, initialStep = 2 }: { order: Order | null; code?: string; navigate: (path: string) => void; initialStep?: number }) {
-  const [current, setCurrent] = useState(initialStep);
+
+export default function Tracking({ order: propOrder, code, navigate, initialStep }: { order?: Order | null; code?: string; navigate: (path: string) => void; initialStep?: number }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [orderData, setOrderData] = useState<Order | null>(propOrder ?? null);
+  const [current, setCurrent] = useState<number>(initialStep ?? 2);
   const dialog = useRef<HTMLDialogElement>(null);
-  const resolved = order?.code === code ? order : code === demoOrder.code ? demoOrder : null;
-  const isRejected = (order as any)?.rejected || current === -1 || (resolved as any)?.rejected;
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!code) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    getOrder(code)
+      .then(res => {
+        if (!isMounted) return;
+        setOrderData(res);
+        if (res && res.status !== undefined) {
+          setCurrent(res.status);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError('Ada yang salah. Coba lagi ya.');
+        setLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [code]);
+
+  if (loading) {
+    return (
+      <main className="container placeholder-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container placeholder-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
+
+  const resolved = orderData ?? (propOrder?.code === code ? propOrder : null);
+  const isRejected = (resolved as any)?.rejected || current === -1 || (resolved as any)?.status === -1;
   if (isRejected) {
     return (
       <main className="container placeholder-page tracking-rejected-page">

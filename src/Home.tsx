@@ -1,35 +1,45 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowRight, Search, ShieldCheck, Wrench, Smartphone, CheckCircle2 } from 'lucide-react';
-import { Button, Field, TechnicianCard, ReviewItem, type Review, type Technician } from './DesignSystem';
+import { Button, Field, TechnicianCard, ReviewItem } from './DesignSystem';
+import { getFeaturedReviews, searchTechnicians, type Review, type Technician } from './api';
 
-const sampleReviews: Review[] = [
-  {
-    name: 'Rina Ayu',
-    date: '2 minggu lalu',
-    rating: 5,
-    text: 'Laptop yang tadinya mati total akhirnya nyala lagi. Mas Dedi jelasin kerusakannya dengan sabar, biayanya juga sesuai perkiraan. Makasih ya!',
-    service: 'Servis laptop'
-  },
-  {
-    name: 'Andi Pratama',
-    date: '3 minggu lalu',
-    rating: 5,
-    text: 'Nggak langsung disuruh ganti komponen. Dicek dulu, terus dikasih pilihan yang pas di kantong. Senang nemu tukang yang jujur dekat rumah.',
-    service: 'Ganti baterai laptop'
-  },
-  {
-    name: 'Dewi Lestari',
-    date: '1 bulan lalu',
-    rating: 5,
-    text: 'Layar HP retak selesai tepat waktu dan hasilnya rapi. Nggak ada biaya tambahan di luar kesepakatan awal.',
-    service: 'Ganti layar HP'
-  }
-];
-
-export default function Home({ technicians, navigate }: { technicians: Technician[]; navigate: (path: string) => void }) {
+export default function Home({
+  technicians: propTechnicians,
+  navigate
+}: {
+  technicians?: Technician[];
+  navigate: (path: string) => void;
+}) {
   const [device, setDevice] = useState('');
   const [problem, setProblem] = useState('');
   const [locationText, setLocationText] = useState('Karawaci, Tangerang');
+  const [techs, setTechs] = useState<Technician[]>(propTechnicians ?? []);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(!propTechnicians?.length);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      propTechnicians ? Promise.resolve(propTechnicians) : searchTechnicians(),
+      getFeaturedReviews()
+    ])
+      .then(([tList, rList]) => {
+        if (!isMounted) return;
+        setTechs(tList);
+        setReviews(rList);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError('Ada yang salah. Coba lagi ya.');
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [propTechnicians]);
 
   useEffect(() => {
     if (location.hash === '#cara-kerja' || location.hash.includes('cara-kerja')) {
@@ -48,6 +58,22 @@ export default function Home({ technicians, navigate }: { technicians: Technicia
     const qs = params.toString();
     navigate(`hasil-pencarian${qs ? `?${qs}` : ''}`);
   };
+
+  if (loading) {
+    return (
+      <main className="container home-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container home-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
 
   return (
     <main className="container home-page">
@@ -142,7 +168,7 @@ export default function Home({ technicians, navigate }: { technicians: Technicia
           <p>Tukang jujur dengan keahlian teruji dan tempat usaha yang jelas di sekitar Tangerang.</p>
         </div>
         <div className="home-techs-grid">
-          {technicians.slice(0, 3).map(tech => (
+          {techs.slice(0, 3).map(tech => (
             <TechnicianCard
               key={tech.id}
               technician={tech}
@@ -165,7 +191,7 @@ export default function Home({ technicians, navigate }: { technicians: Technicia
           <p>Cerita asli dari warga yang memilih benerin dulu daripada buru-buru beli baru.</p>
         </div>
         <div className="home-reviews-grid">
-          {sampleReviews.map((rev, idx) => (
+          {reviews.map((rev, idx) => (
             <ReviewItem key={idx} review={rev} />
           ))}
         </div>

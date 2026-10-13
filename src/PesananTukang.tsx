@@ -1,28 +1,72 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, CircleAlert, Clock, Laptop, MessageSquare, ShieldCheck, Smartphone, Wrench } from 'lucide-react';
 import { Badge, Button, Stepper } from './DesignSystem';
 import { repairSteps } from './Tracking';
-import type { DemoOrder } from './orderState';
+import { getOrder, updateOrderStatus, type Order } from './api';
 
 const TECH_STEPS = ['Diterima', 'Dicek', 'Diperbaiki', 'Siap diambil', 'Selesai'];
 
 export default function PesananTukang({
   code,
-  orders,
+  orders: propOrders,
   onUpdateOrder,
   navigate
 }: {
   code: string;
-  orders: DemoOrder[];
-  onUpdateOrder: (code: string, updates: Partial<DemoOrder>) => void;
+  orders?: Order[];
+  onUpdateOrder?: (code: string, updates: Partial<Order>) => void;
   navigate: (path: string) => void;
 }) {
-  const order = orders.find(o => o.code === code);
-
-  const [estimateMin, setEstimateMin] = useState(order?.estimateMin ? String(order.estimateMin) : '150000');
-  const [estimateMax, setEstimateMax] = useState(order?.estimateMax ? String(order.estimateMax) : '350000');
-  const [message, setMessage] = useState(order?.message || '');
+  const [order, setOrder] = useState<Order | null>(propOrders?.find(o => o.code === code) ?? null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [estimateMin, setEstimateMin] = useState('150000');
+  const [estimateMax, setEstimateMax] = useState('350000');
+  const [message, setMessage] = useState('');
   const [savedNotice, setSavedNotice] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError('');
+    getOrder(code)
+      .then(res => {
+        if (!isMounted) return;
+        setOrder(res);
+        if (res) {
+          setEstimateMin(String(res.estimateMin ?? res.technician.min ?? 150000));
+          setEstimateMax(String(res.estimateMax ?? res.technician.max ?? 350000));
+          setMessage(res.message || '');
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError('Ada yang salah. Coba lagi ya.');
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [code]);
+
+  if (loading) {
+    return (
+      <main className="container pesanan-tukang-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container pesanan-tukang-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
 
   if (!order) {
     return (
@@ -44,43 +88,61 @@ export default function PesananTukang({
   const currentStatus = Math.max(1, order.status);
   const techStepIndex = Math.min(4, Math.max(0, currentStatus - 1));
 
-  const handleNextStep = () => {
-    if (currentStatus < 5) {
-      const nextStatus = currentStatus + 1;
-      let defaultMsg = message;
-      if (nextStatus === 2) {
-        defaultMsg = defaultMsg || `${order.device} sudah kami cek. Perbaikan siap dimulai setelah biaya disetujui.`;
-      } else if (nextStatus === 3) {
-        defaultMsg = defaultMsg || `${order.device} sedang kami perbaiki. Kami akan tes menyeluruh setelah selesai.`;
-      } else if (nextStatus === 4) {
-        defaultMsg = defaultMsg || `${order.device} sudah selesai diperbaiki dan siap diambil di toko.`;
-      } else if (nextStatus === 5) {
-        defaultMsg = defaultMsg || `${order.device} sudah diserahkan ke pelanggan dalam kondisi normal.`;
-      }
-
-      onUpdateOrder(order.code, {
-        status: nextStatus,
-        estimateMin: Number(estimateMin) || order.estimateMin,
-        estimateMax: Number(estimateMax) || order.estimateMax,
-        message: defaultMsg
-      });
-      setMessage(defaultMsg);
-      showNotice();
-    }
-  };
-
-  const handleSaveInfo = () => {
-    onUpdateOrder(order.code, {
-      estimateMin: Number(estimateMin) || order.estimateMin,
-      estimateMax: Number(estimateMax) || order.estimateMax,
-      message: message
-    });
-    showNotice();
-  };
-
   const showNotice = () => {
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 3000);
+  };
+
+  const handleNextStep = async () => {
+    if (currentStatus < 5) {
+      const nextStatus = currentStatus + 1;
+      let defaultMsg = message;
+      const deviceName = order.device || order.details.device;
+      if (nextStatus === 2) {
+        defaultMsg = defaultMsg || `${deviceName} sudah kami cek. Perbaikan siap dimulai setelah biaya disetujui.`;
+      } else if (nextStatus === 3) {
+        defaultMsg = defaultMsg || `${deviceName} sedang kami perbaiki. Kami akan tes menyeluruh setelah selesai.`;
+      } else if (nextStatus === 4) {
+        defaultMsg = defaultMsg || `${deviceName} sudah selesai diperbaiki dan siap diambil di toko.`;
+      } else if (nextStatus === 5) {
+        defaultMsg = defaultMsg || `${deviceName} sudah diserahkan ke pelanggan dalam kondisi normal.`;
+      }
+
+      setActionLoading(true);
+      try {
+        const updated = await updateOrderStatus(order.code, nextStatus, {
+          estimateMin: Number(estimateMin) || order.estimateMin,
+          estimateMax: Number(estimateMax) || order.estimateMax,
+          message: defaultMsg
+        });
+        setOrder(updated);
+        setMessage(defaultMsg);
+        onUpdateOrder?.(order.code, updated);
+        showNotice();
+      } catch {
+        setError('Ada yang salah. Coba lagi ya.');
+      } finally {
+        setActionLoading(false);
+      }
+    }
+  };
+
+  const handleSaveInfo = async () => {
+    setActionLoading(true);
+    try {
+      const updated = await updateOrderStatus(order.code, order.status, {
+        estimateMin: Number(estimateMin) || order.estimateMin,
+        estimateMax: Number(estimateMax) || order.estimateMax,
+        message: message
+      });
+      setOrder(updated);
+      onUpdateOrder?.(order.code, updated);
+      showNotice();
+    } catch {
+      setError('Ada yang salah. Coba lagi ya.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Next step label (Only one main primary action per screen)
@@ -104,7 +166,7 @@ export default function PesananTukang({
           <div className="eyebrow"><span className="eyebrow-line" /> KELOLA PERBAIKAN TOKO</div>
           <h1>Pesanan {order.code}</h1>
           <p className="tech-order-sub">
-            Pelanggan: <strong>{order.customerName.split(' ')[0]}</strong> · Tanggal antar: {order.date}
+            Pelanggan: <strong>{(order.customerName || 'Pelanggan').split(' ')[0]}</strong> · Tanggal antar: {order.date || order.details.date}
           </p>
         </div>
         <div className="tech-order-badge-wrap">
@@ -129,8 +191,8 @@ export default function PesananTukang({
             <h2>{nextActionLabel}</h2>
             <p>Klik tombol di bawah jika kamu sudah menyelesaikan tahap ini.</p>
           </div>
-          <Button className="tech-button tech-btn-next" onClick={handleNextStep}>
-            {nextActionLabel} <ArrowRight size={22} />
+          <Button className="tech-button tech-btn-next" onClick={handleNextStep} disabled={actionLoading}>
+            {actionLoading ? 'Memuat...' : <>{nextActionLabel} <ArrowRight size={22} /></>}
           </Button>
         </section>
       ) : (
@@ -150,30 +212,30 @@ export default function PesananTukang({
           <h2>Informasi barang</h2>
           <div className="tech-info-block">
             <div className="tech-device-badge">
-              {order.device === 'HP' ? <Smartphone size={24} /> : <Laptop size={24} />}
+              {(order.device || order.details.device) === 'HP' ? <Smartphone size={24} /> : <Laptop size={24} />}
               <div>
-                <strong>{order.device} · {order.model}</strong>
+                <strong>{order.device || order.details.device} · {order.model || order.details.model}</strong>
                 <span>Kode: {order.code}</span>
               </div>
             </div>
 
             <div className="tech-damage-box">
               <span className="label">Kerusakan yang dilaporkan:</span>
-              <p>{order.damage}</p>
+              <p>{order.damage || order.details.problem}</p>
             </div>
 
             <div className="tech-meta-box">
               <div>
                 <span className="label">Nama pelanggan:</span>
-                <strong>{order.customerName.split(' ')[0]}</strong>
+                <strong>{(order.customerName || 'Pelanggan').split(' ')[0]}</strong>
               </div>
               <div>
                 <span className="label">Nomor WhatsApp:</span>
-                <span>{order.customerPhone}</span>
+                <span>{order.customerPhone || '0812-0000-0000'}</span>
               </div>
               <div>
                 <span className="label">Waktu masuk:</span>
-                <span>{order.date} pukul {order.time}</span>
+                <span>{order.date || order.details.date} pukul {order.time || order.details.time}</span>
               </div>
             </div>
           </div>
@@ -222,8 +284,9 @@ export default function PesananTukang({
               variant="secondary"
               className="tech-button"
               onClick={handleSaveInfo}
+              disabled={actionLoading}
             >
-              Simpan perkiraan & kabar
+              {actionLoading ? 'Memuat...' : 'Simpan perkiraan & kabar'}
             </Button>
 
             {savedNotice && (
