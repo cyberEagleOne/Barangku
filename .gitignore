@@ -1,24 +1,57 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 build/
-.cache/
-.env*
+.next/
+out/
 .vite/
 vite.config.*.timestamp-*
-*.tsbuildinfo
-*-debug.log*
-logs/
-*.log
-.claude-replay.*
-.tmp-*
-/.figma/design-context/
 
-# Platform-managed agentplat state, not project source. In the
-# client-initiated single-repo workspace layout (make's `Path: "."` spec) the
-# repo root IS the workspace root, so these land inside this repo rather than
-# beside it.
+# Environment variables and secrets (never commit these)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+*-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caches and test output
+.cache/
+.eslintcache
+.parcel-cache/
+coverage/
+*.tsbuildinfo
+.tmp-*
+
+# Deployment tool folders
+.vercel/
+.netlify/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Figma Make / platform state
+/.figma/design-context/
 /.plugins/
 /.opencode-skills/
-.DS_Store
+
+# Local-only agent files (remove a line if you want to share it)
+.claude/
+.claude-replay.*
 AGENTS.md
 CLAUDE.md
