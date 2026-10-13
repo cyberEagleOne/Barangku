@@ -4,7 +4,8 @@ import DesignSystem, { Button, Chip, Navbar, Footer, TechnicianCard, Badge, defa
 import TechnicianDetail from './TechnicianDetail';
 import Tracking, { demoOrder, repairSteps } from './Tracking';
 import Booking, { type Order } from './Booking';
-import Auth, { ForgotPassword, isProtectedRoute, isTechnicianRoute, safeReturnRoute, type DemoUser } from './Auth';
+import Auth, { ForgotPassword, isProtectedRoute, isTechnicianRoute, safeReturnRoute } from './Auth';
+import { getCurrentUser, logout as apiLogout, type User } from './api';
 import MyOrders, { type ListedOrder } from './MyOrders';
 import Home from './Home';
 import { initialOrders, toBookingOrder, type DemoOrder, type ShopStatus } from './orderState';
@@ -75,12 +76,26 @@ export default function App() {
   const [route, setRoute] = useState(location.hash.slice(1) || 'hasil-pencarian');
   const [notice, setNotice] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
-  const [user, setUser] = useState<DemoUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [userError, setUserError] = useState('');
   const [orders, setOrders] = useState<DemoOrder[]>(initialOrders);
   const [shopStatus, setShopStatus] = useState<ShopStatus>('buka');
 
+  useEffect(() => {
+    getCurrentUser()
+      .then(u => {
+        setUser(u);
+        setUserLoading(false);
+      })
+      .catch(() => {
+        setUserError('Ada yang salah. Coba lagi ya.');
+        setUserLoading(false);
+      });
+  }, []);
+
   useEffect(() => { const update = () => { setRoute(location.hash.slice(1) || 'hasil-pencarian'); window.scrollTo(0, 0); }; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
-  const blocked = !user && isProtectedRoute(route);
+  const blocked = !userLoading && !user && isProtectedRoute(route);
   useEffect(() => {
     if (blocked) location.replace(`#masuk?next=${encodeURIComponent(route)}`);
   }, [blocked, route]);
@@ -88,8 +103,18 @@ export default function App() {
   const [page, query = ''] = route.split('?');
   const params = new URLSearchParams(query);
   const next = blocked ? route : params.get('next') ?? undefined;
-  const login = (account: DemoUser, destination: string) => { setUser(account); go(destination); };
-  const logout = () => { setUser(null); setOrder(null); setNotice('Kamu sudah keluar dari akun demo.'); go('beranda'); };
+  const login = (account: User, destination: string) => { setUser(account); go(destination); };
+  const logout = async () => {
+    try {
+      await apiLogout();
+      setUser(null);
+      setOrder(null);
+      setNotice('Kamu sudah keluar dari akun demo.');
+      go('beranda');
+    } catch {
+      setNotice('Ada yang salah. Coba lagi ya.');
+    }
+  };
 
   const handleAcceptOrder = (code: string) => {
     setOrders(prev => prev.map(o => o.code === code ? { ...o, incoming: false, status: 1 } : o));
@@ -113,12 +138,15 @@ export default function App() {
       customerName: user?.name ? user.name.split(' ')[0] : 'Pelanggan',
       customerPhone: user?.contact ?? '0812-0000-0000',
       status: 0,
-      estimate: newBooking.technician.min,
+      estimateMin: newBooking.technician.min,
+      estimateMax: newBooking.technician.max,
+      message: 'Pesanan masuk, menunggu konfirmasi tukang.',
       shop: newBooking.technician.name,
       technicianId: newBooking.technician.id,
       date: newBooking.details.date,
       time: newBooking.details.time,
       incoming: true,
+      rejected: false,
     };
     setOrders(prev => [demoEntry, ...prev.filter(o => o.code !== demoEntry.code)]);
   };
@@ -135,7 +163,11 @@ export default function App() {
   const trackingStep = targetOrder ? targetOrder.status : 2;
 
   let content;
-  if (blocked || page === 'masuk' || page === 'daftar') content = user
+  if (userLoading && isProtectedRoute(page)) {
+    content = <main className="container placeholder-page"><p>Memuat...</p></main>;
+  } else if (userError && isProtectedRoute(page)) {
+    content = <main className="container placeholder-page"><p>{userError}</p></main>;
+  } else if (blocked || page === 'masuk' || page === 'daftar') content = user
     ? <main className="container placeholder-page"><h1>Kamu sudah masuk.</h1><p>Akun demo kamu siap dipakai.</p><Button onClick={() => go(safeReturnRoute(next ?? null))}>Lanjut <ArrowRight size={18} /></Button></main>
     : <Auth key={`${page}-${next ?? ''}`} mode={page === 'daftar' ? 'daftar' : 'masuk'} next={next} protectedInfo={!!next} onLogin={login} navigate={go} />;
   else if (user && user.role !== 'tukang' && isTechnicianRoute(page)) content = (

@@ -71,3 +71,8 @@ export async function logout(): Promise<void> {
   inMemoryStore.currentUser = null;
   return Promise.resolve();
 }
+
+export async function requestPasswordReset(_identity: string): Promise<void> {
+  return Promise.resolve();
+}
+

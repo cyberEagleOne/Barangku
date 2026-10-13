@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ChangeEvent, type ReactNode } from 'react';
 import { ArrowUpRight, ArrowRight, Check, ChevronDown, Menu, X, ShieldCheck, Star, MapPin, Laptop, Smartphone, Wrench, CircleAlert, Search, CheckCheck, Palette, Type, MousePointer2, LayoutGrid, Navigation, MessageSquare, SlidersHorizontal, Inbox } from 'lucide-react';
+import type { User } from './api';
+export type DemoUser = User;
 
 const sections = ['Fondasi', 'Tombol & formulir', 'Kartu & penanda', 'Alur & navigasi', 'Untuk tukang'];
 const ids = ['fondasi', 'formulir', 'kartu', 'alur', 'tukang'];
@@ -49,7 +51,8 @@ export function TechnicianCard({ technician = defaultTechnician, selected: contr
 export function Footer({ onLink }: { onLink: (label: string) => void }) {
   return <footer><div className="container footer-grid"><div className="footer-brand"><img src="/logo-barangku.png" alt="Logo asli Barangku" /><p>Rusak? Benerin dulu,<br />jangan buang.</p></div>{[['Jelajahi', 'Cari tukang', 'Cara kerja', 'Jadi tukang'], ['Bantuan', 'Pertanyaan umum', 'Panduan perbaikan', 'Syarat & ketentuan'], ['Hubungi kami', 'Halo, barangku', 'Tangerang, Indonesia']].map(([title, ...links]) => <div key={title}><strong>{title}</strong>{links.map(link => <button key={link} onClick={() => onLink(link)}>{link}</button>)}</div>)}</div><div className="container copyright"><span>© 2026 Barangku. Dari Tangerang buat semua orang.</span><span>Dibikin dengan niat baik.</span></div></footer>;
 }
-export function Navbar({ user, onLogout }: { user?: { name: string; role?: 'pelanggan' | 'tukang' } | null; onLogout?: () => void }) {
+
+export function Navbar({ user, onLogout }: { user?: User | null; onLogout?: () => void | Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
