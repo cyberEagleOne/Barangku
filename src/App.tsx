@@ -140,7 +140,7 @@ export default function App() {
     : <Auth key={`${page}-${next ?? ''}`} mode={page === 'daftar' ? 'daftar' : 'masuk'} next={next} protectedInfo={!!next} onLogin={login} navigate={go} />;
   else if (user && user.role !== 'tukang' && isTechnicianRoute(page)) content = (
     <main className="container placeholder-page">
-      <div className="eyebrow"><span className="eyebrow-line" /> KHUSUS TEKNISI</div>
+      <div className="eyebrow"><span className="eyebrow-line" /> KHUSUS TUKANG</div>
       <h1>Halaman ini khusus tukang.</h1>
       <p>Akun kamu terdaftar sebagai pelanggan. Silakan kembali ke Beranda atau masuk dengan akun tukang servis.</p>
       <Button onClick={() => go('beranda')}>Kembali ke Beranda <ArrowRight size={18} /></Button>

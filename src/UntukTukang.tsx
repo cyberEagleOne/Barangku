@@ -9,7 +9,7 @@ export default function UntukTukang({ navigate }: { navigate: (path: string) => 
         <div className="tech-hero-content">
           <div className="tech-pill">
             <span className="tech-pill-dot" />
-            <span>Kemitraan Teknisi Independen</span>
+            <span>Khusus kamu tukang servis</span>
           </div>
           <h1>
             Buka tokomu untuk<br />
@@ -31,7 +31,7 @@ export default function UntukTukang({ navigate }: { navigate: (path: string) => 
         <div className="section-header">
           <div className="eyebrow"><span className="eyebrow-line" /> KENAPA GABUNG KAMI</div>
           <h2>Tiga keuntungan bermitra dengan Barangku</h2>
-          <p>Dibuat praktis untuk teknisi lokal. Kami bantu carikan orang yang butuh jasamu.</p>
+          <p>Dibuat praktis untuk tukang lokal. Kami bantu carikan orang yang butuh jasamu.</p>
         </div>
 
         <div className="tech-benefits-grid">
@@ -71,7 +71,7 @@ export default function UntukTukang({ navigate }: { navigate: (path: string) => 
       <section className="tech-section">
         <div className="section-header">
           <div className="eyebrow"><span className="eyebrow-line" /> CARA BERGABUNG</div>
-          <h2>Tiga langkah mudah jadi mitra teknisi</h2>
+          <h2>Tiga langkah mudah jadi mitra tukang</h2>
           <p>Proses sederhana, tanpa syarat rumit yang bikin pusing.</p>
         </div>
 

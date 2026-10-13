@@ -42,7 +42,7 @@ export default function DashboardTukang({
       {/* Header */}
       <div className="dash-header">
         <div>
-          <div className="eyebrow"><span className="eyebrow-line" /> PANEL MITRA TEKNISI</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> PANEL TUKANG</div>
           <h1>Dashboard Toko</h1>
           <p className="dash-subtitle">Pantau status tokomu dan pesanan yang masuk hari ini.</p>
         </div>

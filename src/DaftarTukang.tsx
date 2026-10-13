@@ -114,7 +114,7 @@ export default function DaftarTukang({
   const handleFinish = () => {
     const tukangUser: DemoUser = {
       name: formData.shopName || formData.name || 'Tukang Servis',
-      contact: formData.phone || formData.email || '081234567890',
+      contact: formData.phone || formData.email || '0812-0000-0000',
       fresh: true,
       role: 'tukang'
     };
@@ -169,13 +169,13 @@ export default function DaftarTukang({
   return (
     <main className="container daftar-tukang-page">
       <div className="daftar-tukang-header">
-        <div className="eyebrow"><span className="eyebrow-line" /> PENDAFTARAN MITRA TEKNISI</div>
+        <div className="eyebrow"><span className="eyebrow-line" /> DAFTAR JADI TUKANG</div>
         <h1>Daftar jadi tukang</h1>
         <p className="daftar-tukang-sub">Tiga langkah mudah agar tokomu bisa langsung menerima pelanggan di Tangerang.</p>
       </div>
 
       <div className="tech-stepper-wrap">
-        <Stepper steps={STEPS} current={step} label="Langkah pendaftaran teknisi" />
+        <Stepper steps={STEPS} current={step} label="Langkah pendaftaran tukang" />
       </div>
 
       <div className="tech-form-card">
@@ -183,7 +183,7 @@ export default function DaftarTukang({
           <section className="tech-form-step">
             <div className="step-title-wrap">
               <h2>Langkah 1: Data diri kamu</h2>
-              <p>Informasi akun untuk masuk ke dashboard teknisi.</p>
+              <p>Informasi akun untuk masuk ke dashboard tukang.</p>
             </div>
 
             <div className="tech-form-fields">
@@ -203,7 +203,7 @@ export default function DaftarTukang({
                 <span>Nomor HP (WhatsApp) <span className="required-mark">*</span></span>
                 <input
                   type="tel"
-                  placeholder="Contoh: 081234567890"
+                  placeholder="Contoh: 0812-0000-0000"
                   value={formData.phone}
                   onChange={e => updateField('phone', e.target.value)}
                   className={errors.phone ? 'invalid' : ''}
@@ -299,6 +299,7 @@ export default function DaftarTukang({
                   onClick={() => updateField('photoUploaded', !formData.photoUploaded)}
                   role="button"
                   tabIndex={0}
+                  aria-label="Unggah foto tokomu"
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') updateField('photoUploaded', !formData.photoUploaded); }}
                 >
                   {formData.photoUploaded ? (

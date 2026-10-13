@@ -118,7 +118,7 @@ export default function PesananTukang({
       {/* Stepper showing the 5 technician steps */}
       <section className="tech-order-stepper-card">
         <span className="stepper-card-title">Kemajuan servis saat ini:</span>
-        <Stepper steps={TECH_STEPS} current={techStepIndex} label="Status pengerjaan teknisi" />
+        <Stepper steps={TECH_STEPS} current={techStepIndex} label="Status pengerjaan tukang" />
       </section>
 
       {/* Main Action Banner: Exactly ONE big primary button for the next step */}

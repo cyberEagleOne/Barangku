@@ -137,9 +137,9 @@ export default function Home({ technicians, navigate }: { technicians: Technicia
       {/* 3. Tukang Pilihan di Dekat Kamu */}
       <section className="home-section featured-techs-section">
         <div className="section-header">
-          <div className="eyebrow"><span className="eyebrow-line" /> TEKNISI PILIHAN</div>
+          <div className="eyebrow"><span className="eyebrow-line" /> TUKANG PILIHAN</div>
           <h2>Tukang pilihan di dekat kamu</h2>
-          <p>Teknisi jujur dengan keahlian teruji dan tempat usaha yang jelas di sekitar Tangerang.</p>
+          <p>Tukang jujur dengan keahlian teruji dan tempat usaha yang jelas di sekitar Tangerang.</p>
         </div>
         <div className="home-techs-grid">
           {technicians.slice(0, 3).map(tech => (
@@ -176,7 +176,7 @@ export default function Home({ technicians, navigate }: { technicians: Technicia
         <div className="tech-cta-content">
           <div className="tech-cta-badge">
             <Wrench size={16} />
-            <span>UNTUK TEKNISI INDEPENDEN</span>
+            <span>UNTUK TUKANG SERVIS</span>
           </div>
           <h2>Kamu tukang servis? Gabung barangku</h2>
           <p>Bantu tetangga di sekitarmu dan kembangkan tokomu tanpa biaya pendaftaran.</p>
