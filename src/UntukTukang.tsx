@@ -59,9 +59,9 @@ export default function UntukTukang({ navigate }: { navigate: (path: string) => 
             <div className="tech-benefit-icon">
               <Coins size={28} />
             </div>
-            <h3>Bayaran jelas, tanpa ribet</h3>
+            <h3>Kamu lihat sendiri biaya tiap pesanan</h3>
             <p>
-              Pelanggan bayar langsung ke tanganmu setelah barang selesai diperbaiki dan dicek bareng di tokomu. Tanpa komisi yang memotong hasil keringatmu.
+              Semua perkiraan biaya disepakati langsung dengan pelanggan saat barang dicek. Kamu yang pegang kendali penuh atas tarif jasamu.
             </p>
           </article>
         </div>
@@ -72,7 +72,7 @@ export default function UntukTukang({ navigate }: { navigate: (path: string) => 
         <div className="section-header">
           <div className="eyebrow"><span className="eyebrow-line" /> CARA BERGABUNG</div>
           <h2>Tiga langkah mudah jadi mitra teknisi</h2>
-          <p>Proses kilat, tanpa syarat rumit yang bikin pusing.</p>
+          <p>Proses sederhana, tanpa syarat rumit yang bikin pusing.</p>
         </div>
 
         <div className="tech-steps-grid">
@@ -87,8 +87,8 @@ export default function UntukTukang({ navigate }: { navigate: (path: string) => 
           <article className="tech-step-item">
             <div className="tech-step-badge">2</div>
             <div className="tech-step-body">
-              <h3>Verifikasi kilat oleh tim kami</h3>
-              <p>Kami memastikan tokomu beneran ada agar warga sekitar makin yakin dan mantap mempercayakan barang mereka ke kamu.</p>
+              <h3>Kami cek dulu datamu</h3>
+              <p>Kami memastikan info tokomu sudah sesuai agar pelanggan merasa tenang saat datang ke tempatmu.</p>
             </div>
           </article>
 

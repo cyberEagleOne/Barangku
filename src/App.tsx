@@ -7,9 +7,11 @@ import Booking, { type Order } from './Booking';
 import Auth, { ForgotPassword, isProtectedRoute, isTechnicianRoute, safeReturnRoute, type DemoUser } from './Auth';
 import MyOrders, { type ListedOrder } from './MyOrders';
 import Home from './Home';
-import { initialOrders, toBookingOrder, type DemoOrder } from './orderState';
+import { initialOrders, toBookingOrder, type DemoOrder, type ShopStatus } from './orderState';
 import UntukTukang from './UntukTukang';
 import DaftarTukang from './DaftarTukang';
+import DashboardTukang from './DashboardTukang';
+import PesananTukang from './PesananTukang';
 
 const technicians: Technician[] = [
   { ...defaultTechnician, devices: ['Laptop'] },
@@ -75,6 +77,7 @@ export default function App() {
   const [order, setOrder] = useState<Order | null>(null);
   const [user, setUser] = useState<DemoUser | null>(null);
   const [orders, setOrders] = useState<DemoOrder[]>(initialOrders);
+  const [shopStatus, setShopStatus] = useState<ShopStatus>('buka');
 
   useEffect(() => { const update = () => { setRoute(location.hash.slice(1) || 'hasil-pencarian'); window.scrollTo(0, 0); }; window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
   const blocked = !user && isProtectedRoute(route);
@@ -87,6 +90,18 @@ export default function App() {
   const next = blocked ? route : params.get('next') ?? undefined;
   const login = (account: DemoUser, destination: string) => { setUser(account); go(destination); };
   const logout = () => { setUser(null); setOrder(null); setNotice('Kamu sudah keluar dari akun demo.'); go('beranda'); };
+
+  const handleAcceptOrder = (code: string) => {
+    setOrders(prev => prev.map(o => o.code === code ? { ...o, incoming: false, status: 1 } : o));
+  };
+
+  const handleRejectOrder = (code: string) => {
+    setOrders(prev => prev.map(o => o.code === code ? { ...o, incoming: false, rejected: true, status: -1 } : o));
+  };
+
+  const handleUpdateOrder = (code: string, updates: Partial<DemoOrder>) => {
+    setOrders(prev => prev.map(o => o.code === code ? { ...o, ...updates } : o));
+  };
 
   const handleBookingComplete = (newBooking: Order) => {
     setOrder(newBooking);
@@ -137,41 +152,24 @@ export default function App() {
   else if (page === 'untuk-tukang') content = <UntukTukang navigate={go} />;
   else if (page === 'daftar-tukang') content = <DaftarTukang user={user} onLogin={login} navigate={go} />;
   else if (page === 'dashboard-tukang') content = (
-    <main className="container placeholder-page">
-      <div className="eyebrow"><span className="eyebrow-line" /> PANEL TEKNISI</div>
-      <h1>Dashboard Tukang</h1>
-      <p>Halo, {user?.name}. Halaman dashboard teknisi dengan status buka/tutup dan pesanan masuk akan dibangun di Batch F.</p>
-      <div className="my-orders-grid" style={{ marginTop: '24px' }}>
-        {orders.map(o => (
-          <article key={o.code} className="my-order-card">
-            <div className="my-order-heading">
-              <span>{o.code}</span>
-              <span className="badge busy">{o.incoming ? 'Pesanan Masuk' : `Status: ${repairSteps[o.status]}`}</span>
-            </div>
-            <strong>{o.customerName} · {o.model}</strong>
-            <p className="small-text">{o.damage}</p>
-            <Button style={{ marginTop: '16px' }} onClick={() => go(`pesanan-tukang/${o.code}`)}>Lihat pesanan <ArrowRight size={18} /></Button>
-          </article>
-        ))}
-      </div>
-    </main>
+    <DashboardTukang
+      orders={orders}
+      shopStatus={shopStatus}
+      onStatusChange={setShopStatus}
+      onAccept={handleAcceptOrder}
+      onReject={handleRejectOrder}
+      navigate={go}
+    />
   );
   else if (page.startsWith('pesanan-tukang/')) {
     const code = page.split('/')[1];
-    const ord = orders.find(o => o.code === code);
     content = (
-      <main className="container placeholder-page">
-        <div className="eyebrow"><span className="eyebrow-line" /> DETAIL PESANAN TEKNISI</div>
-        <h1>Detail Pesanan {code}</h1>
-        {ord ? (
-          <div>
-            <p><strong>{ord.customerName}</strong> ({ord.customerPhone}) · {ord.device} {ord.model}</p>
-            <p className="small-text">Kerusakan: {ord.damage} · Status saat ini: {repairSteps[ord.status]}</p>
-          </div>
-        ) : <p>Pesanan tidak ditemukan.</p>}
-        <p style={{ marginTop: '16px' }}>Alur lengkap pergerakan status dan perkiraan biaya akan dibangun di Batch F.</p>
-        <Button variant="secondary" onClick={() => go('dashboard-tukang')}><ArrowLeft size={18} /> Kembali ke dashboard</Button>
-      </main>
+      <PesananTukang
+        code={code}
+        orders={orders}
+        onUpdateOrder={handleUpdateOrder}
+        navigate={go}
+      />
     );
   }
   else if (page === 'beranda' || page === 'cara-kerja') content = <Home technicians={technicians} navigate={go} />;

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, MapPin, MessageCircle, PackageCheck, Phone, ShieldCheck, Wrench, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleAlert, Clock, MapPin, MessageCircle, PackageCheck, Phone, ShieldCheck, Wrench, X } from 'lucide-react';
 import { Badge, Button, Chip, Stepper, TechnicianInfo, defaultTechnician, rupiah } from './DesignSystem';
 import { formatVisit, type Order } from './Booking';
 import { locations } from './TechnicianDetail';
@@ -32,11 +32,12 @@ export function TrackingContent({ order, current, contact, navigate }: { order: 
     `${details.device} kamu sudah beres dan sudah kami tes. Kamu bisa ambil di toko saat jam buka ya.`,
     `Makasih sudah ambil ${device} kamu. Semoga lancar dipakai lagi! Kalau ada kendala, kamu boleh hubungi kami.`,
   ];
+  const customMessage = (order as any)?.message;
   const estimate = new Date(new Date(history[history.length - 1].at).getTime() + 300 * 60000);
   return <><div className="tracking-stepper"><Stepper steps={repairSteps} current={current} label="Langkah perbaikan" /></div>
     {current === 4 && <section className="pickup-card" aria-live="polite"><div className="pickup-icon"><PackageCheck size={28} /></div><div><h2>Perbaikanmu sudah selesai, silakan diambil di toko</h2><p>Barang kamu sudah dicek dan siap dibawa pulang.</p><div className="pickup-details"><span><MapPin size={16} />{locations[t.id] ?? `${t.area}, Tangerang`}</span><span><Clock size={16} />Senin–Sabtu, 09.00–18.00</span></div></div></section>}
     <div className="tracking-layout"><div className="tracking-main">
-      <section className="tracking-card technician-update"><div className="tracking-card-heading"><div className="tracking-heading-icon"><MessageCircle size={20} /></div><h2>Kabar dari tukang</h2><span className="live-label"><span className="dot" /> Kabar terbaru</span></div><div className="update-author"><div className="avatar">{t.name.split(' ').slice(0, 2).map(word => word[0]).join('')}</div><div><strong>{t.name}</strong><time dateTime={history[0].at}>{history[0].date} · {history[0].time}</time></div></div><blockquote>{messages[current]}</blockquote><p className="tracking-message-note"><ShieldCheck size={14} /> Kamu akan dikabari kalau ada perubahan.</p></section>
+      <section className="tracking-card technician-update"><div className="tracking-card-heading"><div className="tracking-heading-icon"><MessageCircle size={20} /></div><h2>Kabar dari tukang</h2><span className="live-label"><span className="dot" /> Kabar terbaru</span></div><div className="update-author"><div className="avatar">{t.name.split(' ').slice(0, 2).map(word => word[0]).join('')}</div><div><strong>{t.name}</strong><time dateTime={history[0].at}>{history[0].date} · {history[0].time}</time></div></div><blockquote>{customMessage || messages[current]}</blockquote><p className="tracking-message-note"><ShieldCheck size={14} /> Kamu akan dikabari kalau ada perubahan.</p></section>
       <section className="tracking-card"><div className="tracking-card-heading"><div className="tracking-heading-icon"><Wrench size={20} /></div><h2>Riwayat perbaikan</h2><span className="history-sort">Terbaru dulu</span></div><ol className="repair-timeline">{history.map((event, i) => <li key={event.label} className={i === 0 ? 'latest' : ''}><span className="timeline-mark">{i === 0 ? <span className="dot" /> : <Check size={14} />}</span><div><div className="timeline-event-title"><strong>{event.label}</strong>{i === 0 && <span className="service-tag">Sekarang</span>}</div><p>{event.description}</p><time dateTime={event.at}>{event.date} · {event.time}</time></div></li>)}</ol></section>
       <section className="tracking-card estimate-card"><div className="tracking-card-heading"><div className="tracking-heading-icon"><CalendarDays size={20} /></div><h2>Perkiraan biaya dan selesai</h2></div><div className="repair-estimates"><div><small>{current === 5 ? 'Biaya servis contoh' : 'Perkiraan biaya'}</small><strong>{rupiah(t.min)} – {rupiah(t.max)}</strong><p>Biaya dikonfirmasi sebelum perbaikan.</p></div><div><small>{current >= 4 ? 'Perbaikan selesai' : 'Perkiraan selesai'}</small><strong>{estimate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong><p>{current >= 4 ? 'Sudah dites oleh tukang.' : `Sekitar pukul ${estimate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}</p></div></div>{current < 4 && <div className="estimate-note"><Clock size={16} /> Jadwal bisa berubah sesuai hasil pengecekan. Tukang akan kabari kamu.</div>}</section>
     </div><aside className="tracking-sidebar"><section className="tracking-card tracking-order"><h2>Pesanan kamu</h2><TechnicianInfo technician={t} verification /><dl className="summary-data"><div><dt>Perangkat kamu</dt><dd>{details.device} · {details.model}</dd></div><div><dt>Kerusakan</dt><dd>{details.problem}</dd></div><div><dt>Tanggal antar ke toko</dt><dd>{formatVisit(details)}</dd></div></dl><Button className="w-full tracking-desktop-contact" onClick={contact}><MessageCircle size={18} /> Hubungi tukang</Button><Button className="w-full" variant="ghost" onClick={() => navigate(`detail/${t.id}`)}>Lihat detail tukang <ArrowRight size={16} /></Button><p className="tracking-contact-note">Ada yang mau ditanya?<br />Tukangnya siap bantu kamu.</p></section><div className="tracking-peace"><ShieldCheck size={20} /><p>Barang kamu, keputusan kamu.<br />Biaya tambahan harus kamu setujui dulu.</p></div></aside></div><div className="tracking-mobile-bar"><Button className="w-full" onClick={contact}><MessageCircle size={18} /> Hubungi tukang</Button></div></>;
@@ -45,6 +46,20 @@ export default function Tracking({ order, code, navigate, initialStep = 2 }: { o
   const [current, setCurrent] = useState(initialStep);
   const dialog = useRef<HTMLDialogElement>(null);
   const resolved = order?.code === code ? order : code === demoOrder.code ? demoOrder : null;
+  const isRejected = (order as any)?.rejected || current === -1 || (resolved as any)?.rejected;
+  if (isRejected) {
+    return (
+      <main className="container placeholder-page tracking-rejected-page">
+        <div className="breadcrumb"><a href="#beranda">Beranda</a><span>/</span><span>Lacak perbaikan</span></div>
+        <div className="search-empty" style={{ marginTop: '32px' }}>
+          <CircleAlert size={48} />
+          <h2>Tukang belum bisa terima pesananmu.</h2>
+          <p>Tukang belum bisa terima pesananmu. Coba pilih tukang lain ya.</p>
+          <Button onClick={() => navigate('hasil-pencarian')}>Cari tukang lain <ArrowRight size={18} /></Button>
+        </div>
+      </main>
+    );
+  }
   if (!resolved) return <main className="container placeholder-page"><h1>Pesanan belum ditemukan.</h1><p>Cek lagi kode pesanan kamu, atau pesan servis dulu ya.</p><Button onClick={() => navigate('hasil-pencarian')}><ArrowLeft size={18} /> Cari tukang</Button></main>;
   const contact = () => dialog.current?.showModal();
   return <main className="container tracking-page"><div className="breadcrumb"><a href="#beranda">Beranda</a><span>/</span><span>Lacak perbaikan</span></div><div className="tracking-page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> KAMU TAHU, BARANGMU SAMPAI MANA</div><h1>Lacak perbaikan</h1><p>Pantau kabarnya di sini. Nggak perlu nebak-nebak lagi.</p></div><div className="tracking-order-code"><small>Kode pesanan kamu</small><div><strong>{resolved.code}</strong><Badge type={current < 4 ? 'busy' : 'open'} label={repairSteps[current]} /></div></div></div>
