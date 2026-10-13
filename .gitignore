@@ -20,3 +20,5 @@ logs/
 /.plugins/
 /.opencode-skills/
 .DS_Store
+AGENTS.md
+CLAUDE.md
