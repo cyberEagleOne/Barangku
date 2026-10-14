@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleAlert, Clock, MapPin, MessageCircle, PackageCheck, Phone, ShieldCheck, Wrench, X } from 'lucide-react';
-import { Badge, Button, Chip, Stepper, TechnicianInfo, defaultTechnician, rupiah } from './DesignSystem';
+import { Badge, Button, Chip, Stepper, TechnicianInfo, rupiah } from './DesignSystem';
 import { formatVisit } from './Booking';
-import { locations } from './TechnicianDetail';
 import { getOrder, type Order } from './api';
 
 export const repairSteps = ['Dipesan', 'Diterima', 'Dicek', 'Diperbaiki', 'Siap diambil', 'Selesai'];
-export const demoOrder: Order = {
-  code: 'BRK-2026-0142', technician: defaultTechnician,
-  details: { device: 'Laptop', model: 'ASUS VivoBook 14', problem: 'Baterai drop', notes: 'Cepat mati kalau tidak dicolok ke listrik.', date: '2026-10-20', time: '09:00' }, photoName: '',
-  status: 2
-};
 
 export function getRepairHistory(order: Order, current: number) {
   const date = new Date(`${order.details.date || '2026-10-20'}T${order.details.time || '09:00'}:00`);
@@ -39,7 +33,7 @@ export function TrackingContent({ order, current, contact, navigate }: { order: 
   const customMessage = (order as any)?.message;
   const estimate = new Date(new Date(history[history.length - 1].at).getTime() + 300 * 60000);
   return <><div className="tracking-stepper"><Stepper steps={repairSteps} current={current} label="Langkah perbaikan" /></div>
-    {current === 4 && <section className="pickup-card" aria-live="polite"><div className="pickup-icon"><PackageCheck size={28} /></div><div><h2>Perbaikanmu sudah selesai, silakan diambil di toko</h2><p>Barang kamu sudah dicek dan siap dibawa pulang.</p><div className="pickup-details"><span><MapPin size={16} />{locations[t.id] ?? `${t.area}, Tangerang`}</span><span><Clock size={16} />Senin–Sabtu, 09.00–18.00</span></div></div></section>}
+    {current === 4 && <section className="pickup-card" aria-live="polite"><div className="pickup-icon"><PackageCheck size={28} /></div><div><h2>Perbaikanmu sudah selesai, silakan diambil di toko</h2><p>Barang kamu sudah dicek dan siap dibawa pulang.</p><div className="pickup-details"><span><MapPin size={16} />{t.address ?? `${t.area}, Tangerang`}</span><span><Clock size={16} />Senin–Sabtu, 09.00–18.00</span></div></div></section>}
     <div className="tracking-layout"><div className="tracking-main">
       <section className="tracking-card technician-update"><div className="tracking-card-heading"><div className="tracking-heading-icon"><MessageCircle size={20} /></div><h2>Kabar dari tukang</h2><span className="live-label"><span className="dot" /> Kabar terbaru</span></div><div className="update-author"><div className="avatar">{t.name.split(' ').slice(0, 2).map(word => word[0]).join('')}</div><div><strong>{t.name}</strong><time dateTime={history[0].at}>{history[0].date} · {history[0].time}</time></div></div><blockquote>{customMessage || messages[current]}</blockquote><p className="tracking-message-note"><ShieldCheck size={14} /> Kamu akan dikabari kalau ada perubahan.</p></section>
       <section className="tracking-card"><div className="tracking-card-heading"><div className="tracking-heading-icon"><Wrench size={20} /></div><h2>Riwayat perbaikan</h2><span className="history-sort">Terbaru dulu</span></div><ol className="repair-timeline">{history.map((event, i) => <li key={event.label} className={i === 0 ? 'latest' : ''}><span className="timeline-mark">{i === 0 ? <span className="dot" /> : <Check size={14} />}</span><div><div className="timeline-event-title"><strong>{event.label}</strong>{i === 0 && <span className="service-tag">Sekarang</span>}</div><p>{event.description}</p><time dateTime={event.at}>{event.date} · {event.time}</time></div></li>)}</ol></section>

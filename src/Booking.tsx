@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleAlert, CircleCheck, ImagePlus, MapPin, ShieldCheck, Wrench, X } from 'lucide-react';
 import { Badge, Button, Chip, Field, Stepper, TechnicianCard, TechnicianInfo, rupiah } from './DesignSystem';
-import { createOrder, type BookingDetails, type Order, type Technician } from './api';
+import { createOrder, getTechnician, type BookingDetails, type Order, type Technician } from './api';
 
 export type { BookingDetails, Order };
 
@@ -23,7 +23,20 @@ export function OrderSummary({ order, title = 'Ringkasan servis kamu' }: { order
   return <section className="order-summary"><h2>{title}</h2><TechnicianInfo technician={t} /><dl className="summary-data"><div><dt>Perangkat kamu</dt><dd>{details.device} · {details.model}</dd></div><div><dt>Kerusakan</dt><dd>{details.problem}</dd></div><div><dt>Rencana ke toko</dt><dd>{formatVisit(details)}</dd></div>{order.photoName && <div><dt>Foto kerusakan</dt><dd>{order.photoName}</dd></div>}{details.notes.trim() && <div><dt>Catatan kamu</dt><dd>{details.notes}</dd></div>}</dl><div className="summary-cost"><span>Perkiraan biaya</span><strong>{rupiah(t.min)} – {rupiah(t.max)}</strong><small>Biaya akhir disepakati setelah perangkat dicek.</small></div></section>;
 }
 
-export default function Booking({ technician: t, navigate, onComplete }: { technician?: Technician; navigate: (path: string) => void; onComplete: (order: Order) => void }) {
+export default function Booking({
+  technician: propTechnician,
+  id,
+  navigate,
+  onComplete,
+}: {
+  technician?: Technician;
+  id?: number;
+  navigate: (path: string) => void;
+  onComplete?: (order: Order) => void;
+}) {
+  const [t, setT] = useState<Technician | null>(propTechnician ?? null);
+  const [loading, setLoading] = useState(!propTechnician && !!id);
+  const [error, setError] = useState('');
   const [step, setStep] = useState(0);
   const [details, setDetails] = useState<BookingDetails>({ device: '', model: '', problem: '', notes: '', date: '', time: '' });
   const [errors, setErrors] = useState<Partial<Record<keyof BookingDetails, string>>>({});
@@ -36,6 +49,32 @@ export default function Booking({ technician: t, navigate, onComplete }: { techn
   const titleRef = useRef<HTMLHeadingElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (propTechnician) {
+      setT(propTechnician);
+      return;
+    }
+    if (id) {
+      let isMounted = true;
+      setLoading(true);
+      setError('');
+      getTechnician(id)
+        .then(res => {
+          if (!isMounted) return;
+          setT(res);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (!isMounted) return;
+          setError('Ada yang salah. Coba lagi ya.');
+          setLoading(false);
+        });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [id, propTechnician]);
+
   useEffect(() => { if (!photo) { setPreview(''); return; } const url = URL.createObjectURL(photo); setPreview(url); return () => URL.revokeObjectURL(url); }, [photo]);
   useEffect(() => { if (step) { window.scrollTo({ top: 0, behavior: 'instant' }); titleRef.current?.focus({ preventScroll: true }); } }, [step]);
 
@@ -47,6 +86,22 @@ export default function Booking({ technician: t, navigate, onComplete }: { techn
     }
     setStep(step + 1);
   };
+
+  if (loading) {
+    return (
+      <main className="container placeholder-page">
+        <p>Memuat...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container placeholder-page">
+        <p>{error}</p>
+      </main>
+    );
+  }
 
   if (!t) return <main className="container placeholder-page"><h1>Pilih tukang dulu, ya.</h1><p>Kamu belum memilih tukang untuk servis ini.</p><Button onClick={() => navigate('hasil-pencarian')}>Cari tukang dulu</Button></main>;
 
@@ -69,7 +124,7 @@ export default function Booking({ technician: t, navigate, onComplete }: { techn
         photoName: photo?.name ?? '',
       });
       setOrder(created);
-      onComplete(created);
+      onComplete?.(created);
       setStep(3);
     } catch {
       setCreateError('Ada yang salah. Coba lagi ya.');

@@ -1,27 +1,18 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, MapPin, ShieldCheck, List, Navigation, Plus, Minus, ChevronDown, Inbox, X, Wrench } from 'lucide-react';
-import DesignSystem, { Button, Chip, Navbar, Footer, TechnicianCard, Badge, defaultTechnician, rupiah, type Technician } from './DesignSystem';
+import DesignSystem, { Button, Chip, Navbar, Footer, TechnicianCard, rupiah, type Technician } from './DesignSystem';
 import TechnicianDetail from './TechnicianDetail';
-import Tracking, { demoOrder, repairSteps } from './Tracking';
-import Booking, { type Order } from './Booking';
+import Tracking from './Tracking';
+import Booking from './Booking';
 import Auth, { ForgotPassword, isProtectedRoute, isTechnicianRoute, safeReturnRoute } from './Auth';
-import { getCurrentUser, logout as apiLogout, type User } from './api';
-import MyOrders, { type ListedOrder } from './MyOrders';
+import { getCurrentUser, logout as apiLogout, searchTechnicians, type User } from './api';
+import MyOrders from './MyOrders';
 import Home from './Home';
-import { initialOrders, toBookingOrder, type DemoOrder, type ShopStatus } from './orderState';
 import UntukTukang from './UntukTukang';
 import DaftarTukang from './DaftarTukang';
 import DashboardTukang from './DashboardTukang';
 import PesananTukang from './PesananTukang';
 
-const technicians: Technician[] = [
-  { ...defaultTechnician, devices: ['Laptop'] },
-  { id: 2, name: 'Kang Arif Laptop', area: 'Cikokol', devices: ['Laptop'], rating: '4,9', reviews: 96, distance: 2.1, min: 175000, max: 600000, status: 'open', verified: true },
-  { id: 3, name: 'Bengkel HP Bu Sari', area: 'Bencongan', devices: ['HP'], rating: '4,7', reviews: 84, distance: 2.8, min: 100000, max: 350000, status: 'busy', verified: true },
-  { id: 4, name: 'Pak Agus Elektronik', area: 'Kelapa Dua', devices: ['Laptop', 'HP'], rating: '4,6', reviews: 57, distance: 3.4, min: 125000, max: 500000, status: 'open', verified: false },
-  { id: 5, name: 'Rizky Servis HP', area: 'Cibodas', devices: ['HP'], rating: '4,8', reviews: 112, distance: 4.2, min: 80000, max: 400000, status: 'closed', verified: true },
-  { id: 6, name: 'Bima Komputer', area: 'Gading Serpong', devices: ['Laptop'], rating: '4,9', reviews: 73, distance: 5.6, min: 200000, max: 750000, status: 'busy', verified: true },
-];
 const filters = ['Semua', 'Laptop', 'HP', 'Terverifikasi', 'Buka sekarang'];
 function go(path: string) { location.hash = path; window.scrollTo({ top: 0, behavior: 'instant' }); }
 function SearchResults() {
@@ -115,12 +106,9 @@ function SearchResults() {
 export default function App() {
   const [route, setRoute] = useState(location.hash.slice(1) || 'hasil-pencarian');
   const [notice, setNotice] = useState('');
-  const [order, setOrder] = useState<Order | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [userError, setUserError] = useState('');
-  const [orders, setOrders] = useState<DemoOrder[]>(initialOrders);
-  const [shopStatus, setShopStatus] = useState<ShopStatus>('buka');
 
   useEffect(() => {
     getCurrentUser()
@@ -148,59 +136,12 @@ export default function App() {
     try {
       await apiLogout();
       setUser(null);
-      setOrder(null);
       setNotice('Kamu sudah keluar dari akun demo.');
       go('beranda');
     } catch {
       setNotice('Ada yang salah. Coba lagi ya.');
     }
   };
-
-  const handleAcceptOrder = (code: string) => {
-    setOrders(prev => prev.map(o => o.code === code ? { ...o, incoming: false, status: 1 } : o));
-  };
-
-  const handleRejectOrder = (code: string) => {
-    setOrders(prev => prev.map(o => o.code === code ? { ...o, incoming: false, rejected: true, status: -1 } : o));
-  };
-
-  const handleUpdateOrder = (code: string, updates: Partial<DemoOrder>) => {
-    setOrders(prev => prev.map(o => o.code === code ? { ...o, ...updates } : o));
-  };
-
-  const handleBookingComplete = (newBooking: Order) => {
-    setOrder(newBooking);
-    const demoEntry: DemoOrder = {
-      code: newBooking.code,
-      device: newBooking.details.device,
-      model: newBooking.details.model,
-      damage: newBooking.details.problem,
-      customerName: user?.name ? user.name.split(' ')[0] : 'Pelanggan',
-      customerPhone: user?.contact ?? '0812-0000-0000',
-      status: 0,
-      estimateMin: newBooking.technician.min,
-      estimateMax: newBooking.technician.max,
-      message: 'Pesanan masuk, menunggu konfirmasi tukang.',
-      shop: newBooking.technician.name,
-      technicianId: newBooking.technician.id,
-      date: newBooking.details.date,
-      time: newBooking.details.time,
-      incoming: true,
-      rejected: false,
-    };
-    setOrders(prev => [demoEntry, ...prev.filter(o => o.code !== demoEntry.code)]);
-  };
-
-  const samples: ListedOrder[] = orders.filter(o => !o.incoming).map(o => {
-    const tech = technicians.find(t => t.id === o.technicianId) ?? defaultTechnician;
-    return { order: toBookingOrder(o, tech), status: o.status };
-  });
-
-  const currentCode = page.split('/')[1];
-  const targetOrder = orders.find(o => o.code === currentCode);
-  const targetTech = targetOrder ? (technicians.find(t => t.id === targetOrder.technicianId) ?? defaultTechnician) : defaultTechnician;
-  const trackingOrder = targetOrder ? toBookingOrder(targetOrder, targetTech) : null;
-  const trackingStep = targetOrder ? targetOrder.status : 2;
 
   let content;
   if (userLoading && isProtectedRoute(page)) {
@@ -219,32 +160,24 @@ export default function App() {
     </main>
   );
   else if (page === 'lupa-sandi') content = <ForgotPassword key={route} next={next} />;
-  else if (page === 'pesanan-saya') content = <MyOrders key={user?.name} fresh={!!user?.fresh && !orders.filter(o => !o.incoming).length} navigate={go} />;
+  else if (page === 'pesanan-saya') content = <MyOrders key={user?.name} fresh={!!user?.fresh} navigate={go} />;
   else if (page === 'profil') content = <main className="container placeholder-page profile-page"><h1>Profil kamu</h1><div className="order-summary"><h2>{user?.name}</h2><p>{user?.contact}</p><p className="small-text">Akun demo · {user?.role === 'tukang' ? 'Tukang servis' : 'Pelanggan'}</p><Button variant="secondary" onClick={logout}>Keluar</Button></div></main>;
   else if (page === 'untuk-tukang') content = <UntukTukang navigate={go} />;
   else if (page === 'daftar-tukang') content = <DaftarTukang user={user} onLogin={login} navigate={go} />;
-  else if (page === 'dashboard-tukang') content = (
-    <DashboardTukang
-      onStatusChange={setShopStatus}
-      onAccept={handleAcceptOrder}
-      onReject={handleRejectOrder}
-      navigate={go}
-    />
-  );
+  else if (page === 'dashboard-tukang') content = <DashboardTukang navigate={go} />;
   else if (page.startsWith('pesanan-tukang/')) {
     const code = page.split('/')[1];
     content = (
       <PesananTukang
         key={route}
         code={code}
-        onUpdateOrder={handleUpdateOrder}
         navigate={go}
       />
     );
   }
   else if (page === 'beranda' || page === 'cara-kerja') content = <Home navigate={go} />;
-  else if (page.startsWith('detail/')) content = <TechnicianDetail key={route} id={Number(page.split('/')[1])} technician={technicians.find(t => t.id === Number(page.split('/')[1]))} navigate={go} />;
-  else if (page.startsWith('pesan/')) content = <Booking key={route} technician={technicians.find(t => t.id === Number(page.split('/')[1]))} navigate={go} onComplete={handleBookingComplete} />;
+  else if (page.startsWith('detail/')) content = <TechnicianDetail key={route} id={Number(page.split('/')[1])} navigate={go} />;
+  else if (page.startsWith('pesan/')) content = <Booking key={route} id={Number(page.split('/')[1])} navigate={go} />;
   else if (page.startsWith('lacak/')) content = <Tracking key={route} code={page.split('/')[1]} navigate={go} />;
   else content = <SearchResults />;
 

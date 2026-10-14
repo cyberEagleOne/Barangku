@@ -3,14 +3,7 @@ import { ArrowLeft, ArrowRight, Check, Clock, MapPin, MessageCircle, ShieldCheck
 import { Badge, Button, ReviewItem, rupiah } from './DesignSystem';
 import { getTechnician, getTechnicianReviews, type Review, type Technician } from './api';
 
-export const locations: Record<number, string> = {
-  1: 'Jl. Imam Bonjol No. 24, Karawaci, Kota Tangerang',
-  2: 'Jl. Teuku Umar No. 18, Cikokol, Kota Tangerang',
-  3: 'Jl. Borobudur No. 12, Bencongan, Kelapa Dua, Tangerang',
-  4: 'Jl. Raya Kelapa Dua No. 35, Kelapa Dua, Tangerang',
-  5: 'Jl. Prambanan Raya No. 8, Cibodas, Kota Tangerang',
-  6: 'Jl. Boulevard Gading Serpong No. 16, Tangerang',
-};
+
 
 function getPrices(t: Technician) {
   const laptop = [
@@ -97,7 +90,7 @@ export default function TechnicianDetail({
   return <main className="container detail-page">
     <div className="breadcrumb"><a href="#beranda">Beranda</a><span>/</span><a href="#hasil-pencarian">Hasil pencarian</a><span>/</span><span>{t.name}</span></div>
     <div className="detail-photo"><img src={t.photo ?? 'https://images.unsplash.com/photo-1580835916901-40770720c505?auto=format&fit=crop&w=1600&q=85'} alt={`Contoh tempat kerja ${t.name}`} /><div className="detail-photo-label"><Wrench size={16} /> Tempat barang kamu dibenerin</div><span className="detail-photo-note">Foto ilustrasi</span></div>
-    <header className="detail-heading"><div><div className="detail-heading-badges">{t.verified && <Badge />}<Badge type={t.status} /></div><h1>{t.name}</h1><p className="detail-specialty">Servis {t.devices.join(' & ')} · Tukang lokal di {t.area}</p><div className="detail-rating"><Star size={18} fill="currentColor" /><strong>{t.rating}</strong><Button variant="ghost" onClick={() => document.getElementById('ulasan-tukang')?.scrollIntoView({ behavior: 'smooth' })}>{t.reviews} ulasan pelanggan</Button><span className="rating-divider" /><MapPin size={16} /><span>{t.distance.toLocaleString('id-ID')} km dari kamu</span></div></div><div className="detail-location"><p><MapPin size={19} /><span>{locations[t.id]}<small>Alamat contoh untuk prototipe</small></span></p><p><Clock size={19} /><span>Senin–Sabtu, 09.00–18.00<small>{t.status === 'open' ? 'Buka sekarang · Tutup pukul 18.00' : t.status === 'busy' ? 'Sedang sibuk · Tanya antrean dulu ya' : 'Tutup sekarang · Buka lagi pukul 09.00'}</small></span></p></div></header>
+    <header className="detail-heading"><div><div className="detail-heading-badges">{t.verified && <Badge />}<Badge type={t.status} /></div><h1>{t.name}</h1><p className="detail-specialty">Servis {t.devices.join(' & ')} · Tukang lokal di {t.area}</p><div className="detail-rating"><Star size={18} fill="currentColor" /><strong>{t.rating}</strong><Button variant="ghost" onClick={() => document.getElementById('ulasan-tukang')?.scrollIntoView({ behavior: 'smooth' })}>{t.reviews} ulasan pelanggan</Button><span className="rating-divider" /><MapPin size={16} /><span>{t.distance.toLocaleString('id-ID')} km dari kamu</span></div></div><div className="detail-location"><p><MapPin size={19} /><span>{t.address ?? `${t.area}, Tangerang`}<small>Alamat contoh untuk prototipe</small></span></p><p><Clock size={19} /><span>Senin–Sabtu, 09.00–18.00<small>{t.status === 'open' ? 'Buka sekarang · Tutup pukul 18.00' : t.status === 'busy' ? 'Sedang sibuk · Tanya antrean dulu ya' : 'Tutup sekarang · Buka lagi pukul 09.00'}</small></span></p></div></header>
     <div className="detail-layout"><div className="detail-content">
       <section className="detail-section"><div className="detail-section-title"><Wrench size={20} /><h2>Tentang tukang ini</h2></div><p>{t.name} bantu benerin {t.devices.join(' dan ')} kamu di {t.area}. Mulai dari pengecekan sampai ganti komponen, kerusakannya dijelasin pakai bahasa yang gampang dimengerti. Biaya dibicarakan dulu sebelum dikerjakan, jadi kamu bisa memutuskan dengan tenang.</p><div className="detail-promises"><span><Check size={16} /> Biaya disepakati dulu</span><span><Check size={16} /> Barang dites sebelum diambil</span></div></section>
       <section className="detail-section"><div className="detail-section-title"><h2>Perkiraan biaya</h2><span className="service-tag">{t.devices.join(' & ')}</span></div><p className="detail-section-subtitle">Biar kamu punya gambaran sebelum datang.</p><div className="price-table-wrap" tabIndex={0} aria-label="Tabel perkiraan biaya servis"><table className="price-table"><thead><tr><th scope="col">Jenis servis</th><th scope="col">Perkiraan biaya</th></tr></thead><tbody>{getPrices(t).map(([service, min, max]) => <tr key={service}><th scope="row">{service}</th><td>{rupiah(min)} – {rupiah(max)}</td></tr>)}</tbody></table></div><div className="price-explanation"><ShieldCheck size={18} /><p>Biaya bisa beda tergantung tipe perangkat dan kerusakannya. <strong>Tukang akan konfirmasi ke kamu sebelum mulai.</strong></p></div></section>
