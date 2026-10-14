@@ -53,5 +53,9 @@ Thumbs.db
 # Local-only agent files (remove a line if you want to share it)
 .claude/
 .claude-replay.*
-AGENTS.md
 CLAUDE.md
+
+# Figma Make state (site.json stays tracked because vite.config.ts imports it) and extra lock file
+/.figma/make/*
+!/.figma/make/site.json
+pnpm-lock.yaml
