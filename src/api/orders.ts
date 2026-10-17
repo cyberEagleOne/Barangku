@@ -1,38 +1,113 @@
-// Demo implementation. Replace with real API calls.
-
-import { inMemoryStore, initialTechnicians } from './mockData';
-import type { BookingDetails, Order, OrderStatus, Technician } from './types';
+import { apiFetch } from "./client"
+import { inMemoryStore, initialTechnicians } from "./mockData"
+import type { BookingDetails, Order, OrderStatus, Technician } from "./types"
 
 export async function getOrder(code: string): Promise<Order | null> {
-  const found = inMemoryStore.orders.find(o => o.code === code);
-  return Promise.resolve(found ? { ...found } : null);
+  try {
+    const data = await apiFetch<Order>(
+      `/api/orders/${encodeURIComponent(code)}`,
+    )
+    if (data && data.code) {
+      return data
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.getOrder] API call failed, falling back:",
+      err.message,
+    )
+  }
+
+  const found = inMemoryStore.orders.find((o) => o.code === code)
+  return found ? { ...found } : null
 }
 
-export async function getMyOrders(_userContact?: string): Promise<Order[]> {
+export async function getMyOrders(userContact?: string): Promise<Order[]> {
+  try {
+    const query = userContact
+      ? `?userContact=${encodeURIComponent(userContact)}`
+      : ""
+    const data = await apiFetch<Order[]>(`/api/orders/my${query}`)
+    if (Array.isArray(data)) {
+      return data
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.getMyOrders] API call failed, falling back:",
+      err.message,
+    )
+  }
+
   // Returns customer orders (completed/accepted initial orders plus orders created by the customer)
   const list = inMemoryStore.orders.filter(
-    o => !o.incoming || (o as any).isCustomerOrder
-  );
-  return Promise.resolve([...list]);
+    (o) => !o.incoming || (o as any).isCustomerOrder,
+  )
+  return [...list]
 }
 
-export async function getTechnicianOrders(technicianId?: number): Promise<Order[]> {
+export async function getTechnicianOrders(
+  technicianId?: number,
+): Promise<Order[]> {
+  try {
+    const query = technicianId ? `?technicianId=${technicianId}` : ""
+    const data = await apiFetch<Order[]>(`/api/orders/technician${query}`)
+    if (Array.isArray(data)) {
+      return data
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.getTechnicianOrders] API call failed, falling back:",
+      err.message,
+    )
+  }
+
   const list = inMemoryStore.orders.filter(
-    o => !technicianId || o.technicianId === technicianId
-  );
-  return Promise.resolve([...list]);
+    (o) => !technicianId || o.technicianId === technicianId,
+  )
+  return [...list]
 }
 
 export async function createOrder(data: {
-  technician: Technician;
-  details: BookingDetails;
-  photoName?: string;
-  customerName?: string;
-  customerPhone?: string;
-  code?: string;
+  technician: Technician
+  details: BookingDetails
+  photoName?: string
+  photoUrl?: string
+  customerName?: string
+  customerPhone?: string
+  code?: string
 }): Promise<Order> {
-  const code = data.code || `BRK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-  const tech = data.technician || initialTechnicians[0];
+  try {
+    const result = await apiFetch<Order>("/api/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        technicianId: data.technician?.id,
+        technician: data.technician,
+        details: data.details,
+        photoName: data.photoName,
+        photoUrl: data.photoUrl,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        code: data.code,
+      }),
+    })
+    if (result && result.code) {
+      // Also cache in local memory store for instant cross-tab/memory sync
+      inMemoryStore.orders = [
+        result,
+        ...inMemoryStore.orders.filter((o) => o.code !== result.code),
+      ]
+      return result
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.createOrder] API call failed, falling back:",
+      err.message,
+    )
+  }
+
+  const code =
+    data.code || `BRK-2026-${Math.floor(1000 + Math.random() * 9000)}`
+  const tech = data.technician || initialTechnicians[0]
+  const now = new Date()
 
   const newOrder: Order & { isCustomerOrder?: boolean } = {
     code,
@@ -40,46 +115,91 @@ export async function createOrder(data: {
     technicianId: tech.id,
     shop: tech.name,
     details: data.details,
-    photoName: data.photoName || '',
+    photoName: data.photoName || "",
+    photoUrl: data.photoUrl || "",
     status: 0,
     estimateMin: tech.min,
     estimateMax: tech.max,
-    message: 'Pesanan masuk, menunggu konfirmasi tukang.',
+    message: "Pesanan masuk, menunggu konfirmasi tukang.",
     incoming: true,
     rejected: false,
-    customerName: data.customerName || 'Pelanggan',
-    customerPhone: data.customerPhone || '0812-0000-0000',
+    customerName: data.customerName || "Pelanggan",
+    customerPhone: data.customerPhone || "0812-0000-0000",
     device: data.details.device,
     model: data.details.model,
     damage: data.details.problem,
     date: data.details.date,
     time: data.details.time,
+    statusLogs: [
+      {
+        status: 0,
+        label: "Dipesan",
+        timestamp: now.toISOString(),
+        date: now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+        time: now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(":", "."),
+        note: "Pesanan masuk, menunggu konfirmasi tukang.",
+      },
+    ],
     isCustomerOrder: true,
-  };
+  }
 
-  inMemoryStore.orders = [newOrder, ...inMemoryStore.orders.filter(o => o.code !== code)];
-  return Promise.resolve({ ...newOrder });
+  inMemoryStore.orders = [
+    newOrder,
+    ...inMemoryStore.orders.filter((o) => o.code !== code),
+  ]
+  return { ...newOrder }
 }
 
 export async function updateOrderStatus(
   code: string,
   status: OrderStatus,
   details?: {
-    message?: string;
-    estimateMin?: number;
-    estimateMax?: number;
-    rejected?: boolean;
-    incoming?: boolean;
-  }
+    message?: string
+    estimateMin?: number
+    estimateMax?: number
+    rejected?: boolean
+    incoming?: boolean
+  },
 ): Promise<Order> {
-  const orderIndex = inMemoryStore.orders.findIndex(o => o.code === code);
-  if (orderIndex === -1) {
-    throw new Error(`Order ${code} tidak ditemukan.`);
+  try {
+    const result = await apiFetch<Order>(
+      `/api/orders/${encodeURIComponent(code)}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          status,
+          ...details,
+        }),
+      },
+    )
+    if (result && result.code) {
+      const idx = inMemoryStore.orders.findIndex((o) => o.code === code)
+      if (idx !== -1) {
+        inMemoryStore.orders[idx] = result
+      }
+      return result
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.updateOrderStatus] API call failed, falling back:",
+      err.message,
+    )
   }
 
-  const existing = inMemoryStore.orders[orderIndex];
-  const newEstimateMin = details?.estimateMin !== undefined ? details.estimateMin : existing.estimateMin;
-  const newEstimateMax = details?.estimateMax !== undefined ? details.estimateMax : existing.estimateMax;
+  const orderIndex = inMemoryStore.orders.findIndex((o) => o.code === code)
+  if (orderIndex === -1) {
+    throw new Error(`Order ${code} tidak ditemukan.`)
+  }
+
+  const existing = inMemoryStore.orders[orderIndex]
+  const newEstimateMin =
+    details?.estimateMin !== undefined
+      ? details.estimateMin
+      : existing.estimateMin
+  const newEstimateMax =
+    details?.estimateMax !== undefined
+      ? details.estimateMax
+      : existing.estimateMax
 
   const updated: Order = {
     ...existing,
@@ -90,20 +210,66 @@ export async function updateOrderStatus(
       max: newEstimateMax ?? existing.technician.max,
     },
     ...(details?.message !== undefined ? { message: details.message } : {}),
-    ...(details?.estimateMin !== undefined ? { estimateMin: details.estimateMin } : {}),
-    ...(details?.estimateMax !== undefined ? { estimateMax: details.estimateMax } : {}),
+    ...(details?.estimateMin !== undefined
+      ? { estimateMin: details.estimateMin }
+      : {}),
+    ...(details?.estimateMax !== undefined
+      ? { estimateMax: details.estimateMax }
+      : {}),
     ...(details?.rejected !== undefined ? { rejected: details.rejected } : {}),
     ...(details?.incoming !== undefined ? { incoming: details.incoming } : {}),
-  };
+  }
 
-  inMemoryStore.orders[orderIndex] = updated;
-  return Promise.resolve({ ...updated });
+  inMemoryStore.orders[orderIndex] = updated
+  return { ...updated }
 }
 
 export async function acceptOrder(code: string): Promise<Order> {
-  return updateOrderStatus(code, 1, { incoming: false, rejected: false });
+  try {
+    const result = await apiFetch<Order>(
+      `/api/orders/${encodeURIComponent(code)}/accept`,
+      {
+        method: "POST",
+      },
+    )
+    if (result && result.code) {
+      const idx = inMemoryStore.orders.findIndex((o) => o.code === code)
+      if (idx !== -1) {
+        inMemoryStore.orders[idx] = result
+      }
+      return result
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.acceptOrder] API call failed, falling back:",
+      err.message,
+    )
+  }
+
+  return updateOrderStatus(code, 1, { incoming: false, rejected: false })
 }
 
 export async function rejectOrder(code: string): Promise<Order> {
-  return updateOrderStatus(code, -1, { incoming: false, rejected: true });
+  try {
+    const result = await apiFetch<Order>(
+      `/api/orders/${encodeURIComponent(code)}/reject`,
+      {
+        method: "POST",
+      },
+    )
+    if (result && result.code) {
+      const idx = inMemoryStore.orders.findIndex((o) => o.code === code)
+      if (idx !== -1) {
+        inMemoryStore.orders[idx] = result
+      }
+      return result
+    }
+  } catch (err: any) {
+    console.warn(
+      "[orders.rejectOrder] API call failed, falling back:",
+      err.message,
+    )
+  }
+
+  return updateOrderStatus(code, -1, { incoming: false, rejected: true })
 }

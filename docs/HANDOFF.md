@@ -1,5 +1,7 @@
 # Barangku – Backend Handoff Specification
 
+> **Panduan Database**: Untuk instruksi lengkap pengaturan PostgreSQL, ekstensi PostGIS, skema database, migrasi data, dan checklist tugas rekan database, silakan lihat dokumen [DATABASE_HANDOVER.md](./DATABASE_HANDOVER.md).
+
 ## 1. Overview & Running the Project
 
 Barangku is a web application that connects customers with broken electronics (laptops and smartphones) to trusted independent repair technicians nearby in Tangerang. Customers can search and compare repair shops by device type, ratings, and estimated price ranges, book an in-person repair visit, and track repair progress step by step. Technicians have a dedicated portal to manage incoming repair requests, update repair progress, and adjust shop operational status.
