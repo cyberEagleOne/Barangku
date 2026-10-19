@@ -31,6 +31,7 @@ Seluruh rute API utama telah selesai diimplementasikan dan telah teruji kompatib
 | | `POST /api/auth/login` | Masuk menggunakan email / nomor WhatsApp & kata sandi |
 | | `GET /api/auth/me` | Mengambil profil pengguna yang sedang login melalui token |
 | | `POST /api/auth/logout` | Menghapus sesi / cookie autentikasi |
+| | `DELETE /api/auth/me` | Menghapus akun pengguna yang sedang login secara permanen beserta pembersihan relasi foreign key |
 | **Teknisi & Toko** | `GET /api/technicians` | Mencari daftar bengkel dengan filter perangkat, urutan jarak terdekat, rating, dan filter status |
 | | `GET /api/technicians/:id` | Mengambil data detail profil bengkel servis |
 | | `PATCH /api/technicians/status` | Mengubah status operasional toko (`open`, `busy`, `closed`) khusus teknisi |
@@ -41,6 +42,13 @@ Seluruh rute API utama telah selesai diimplementasikan dan telah teruji kompatib
 | | `PATCH /api/orders/:code/status` | Memperbarui tahapan status servis (0: Menunggu Konfirmasi s/d 4: Selesai / -1: Dibatalkan) beserta catatan log riwayat |
 | **Ulasan** | `GET /api/reviews/featured` | Mengambil ulasan unggulan untuk ditampilkan pada Beranda |
 | | `GET /api/reviews/technician/:id`| Mengambil daftar ulasan untuk teknisi tertentu |
+
+### Perintah CLI Pengelolaan Database & Backup
+| Perintah | File Sumber | Deskripsi |
+| :--- | :--- | :--- |
+| `npm run db:setup` | [`server/db/setupDb.ts`](file:///c:/Users/USER/Music/Barangku/server/db/setupDb.ts) | Menginisialisasi database PostgreSQL, skema tabel, indeks, ekstensi PostGIS/pgcrypto, serta seeding bengkel & akun |
+| `npm run db:backup` | [`server/db/backup.ts`](file:///c:/Users/USER/Music/Barangku/server/db/backup.ts) | Mengekspor snapshot database SQL ke direktori `backups/` dan membersihkan log audit usang (> 90 hari) |
+| `npm run db:backup -- --retention=30` | [`server/db/backup.ts`](file:///c:/Users/USER/Music/Barangku/server/db/backup.ts) | Backup dengan kustomisasi retensi log (misal bersihkan log yang lebih dari 30 hari) |
 
 ---
 
@@ -123,6 +131,28 @@ Berikut adalah rekapitulasi **keseluruhan perubahan dan evolusi sistem** dari aw
    - Karawaci dipastikan tidak pernah tercentang saat GPS sedang aktif.
 2. **Penambahan Data Wilayah BSD City**:
    - Menambahkan data bengkel *BSD Gadget Care* (lat: `-6.3015`, lng: `106.6535`) di seed database dan daftar lokasi frontend untuk memastikan pengujian di area BSD City/Tangerang Selatan terbukti akurat.
+
+### G. Pengetatan Autentikasi & Fitur Penghapusan Akun
+1. **Penghapusan Auto-Create Guest & Fallback Palsu**:
+   - Menghapus pembuatan akun otomatis secara diam-diam saat login gagal di [`server/routes/auth.ts`](file:///c:/Users/USER/Music/Barangku/server/routes/auth.ts).
+   - Menghapus pembuatan pengguna dummy di `localStorage` frontend ([`src/api/auth.ts`](file:///c:/Users/USER/Music/Barangku/src/api/auth.ts)).
+   - Akun yang belum terdaftar kini ditolak tegas dengan status HTTP `404` (*"Akun belum terdaftar. Silakan daftar akun baru terlebih dahulu."*).
+   - Pengecekan kata sandi diverifikasi ketat menggunakan perbandingan hash bcrypt (`401` jika kata sandi salah).
+2. **Penyelarasan Hash Kata Sandi Akun Demo & Akun Eksisting**:
+   - Hash kata sandi untuk akun bawaan (`rina@email.com` dan `dedi@barangku.id`) serta akun demo lainnya telah diperbarui dengan hash bcrypt valid untuk password `"password123"` di database PostgreSQL dan *in-memory store*.
+3. **Endpoint & UI Hapus Akun Permanen (`DELETE /api/auth/me`)**:
+   - Menambahkan rute `DELETE /api/auth/me` terproteksi JWT di backend dan fungsi `deleteAccount()` di frontend.
+   - Relasi foreign key pada audit log (`order_status_logs.changed_by`) dinetralkan terlebih dahulu sehingga data pengguna terhapus bersih tanpa melanggar constraint database.
+   - Menambahkan tombol "Hapus Akun" dengan dialog konfirmasi keamanan browser di halaman profil pengguna ([`src/App.tsx`](file:///c:/Users/USER/Music/Barangku/src/App.tsx)).
+
+### H. Transaksi Atomik Database & Otomatisasi Backup / Sanitasi Data
+1. **Transaksi Atomik Pembuatan & Pembaruan Pesanan (`withTransaction`)**:
+   - Seluruh operasi penulisan ke tabel `orders` dan pencatatan riwayat ke `order_status_logs` di [`server/services/dbService.ts`](file:///c:/Users/USER/Music/Barangku/server/services/dbService.ts) telah dibungkus menggunakan transaksi atomik via helper `withTransaction()` di [`server/db/pool.ts`](file:///c:/Users/USER/Music/Barangku/server/db/pool.ts).
+   - Menjamin integritas data relasional (`BEGIN ... COMMIT / ROLLBACK`) sehingga tidak ada pesanan tanpa log status atau sebaliknya.
+2. **Penyediaan Script Backup & Sanitasi Data Produksi (`server/db/backup.ts`)**:
+   - Menyediakan script otomatis [`server/db/backup.ts`](file:///c:/Users/USER/Music/Barangku/server/db/backup.ts) yang dapat dieksekusi via `npm run db:backup`.
+   - Mengekspor snapshot seluruh tabel relasional (`users`, `technicians`, `orders`, `order_status_logs`, `reviews`) dalam format SQL ke direktori `backups/backup_barangku_TIMESTAMP.sql`.
+   - Mengintegrasikan pembersihan log status pesanan lama secara otomatis berdasarkan batas retensi (default: 90 hari).
 
 ---
 
@@ -307,32 +337,47 @@ Berikut adalah daftar tugas terarah yang direkomendasikan untuk rekan pengembang
   ```sql
   SELECT PostGIS_Version();
   ```
-- [ ] **2. Integrasi Query Spasial Terdekat di dbService**:
-  Di [`server/services/dbService.ts`](file:///e:/Project_Barangku/Barangku/server/services/dbService.ts), pastikan fungsi `searchTechnicians` saat mode PostgreSQL aktif memanfaatkan operator KNN (*k-nearest neighbors*) `<->` dan fungsi jarak PostGIS:
+  *(Otomatis diverifikasi saat menjalankan `npm run db:setup`)*.
+
+- [x] **2. Integrasi Query Spasial Terdekat di dbService (SELESAI)**:
+  Di [`server/services/dbService.ts`](file:///C:/Users/USER/Music/Barangku/server/services/dbService.ts), fungsi `searchTechnicians` saat mode PostgreSQL aktif telah dioptimalkan memanfaatkan operator KNN (*k-nearest neighbors*) `<->` dengan indeks GiST PostGIS dan fungsi jarak geodesik akurat:
   ```sql
   SELECT 
     id, name, area, address, devices, rating, review_count as reviews,
     min_price as min, max_price as max, status, verified, photo_url as photo,
     latitude, longitude,
-    ST_Distance(
+    ROUND((ST_Distance(
       location, 
-      ST_SetSRID(ST_MakePoint($lng, $lat), 4326)::geography
-    ) / 1000 AS distance
+      ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+    ) / 1000.0)::numeric, 1) AS distance
   FROM technicians
-  ORDER BY location <-> ST_SetSRID(ST_MakePoint($lng, $lat), 4326) ASC;
+  ORDER BY location <-> ST_SetSRID(ST_MakePoint($1, $2), 4326) ASC;
   ```
-- [ ] **3. Implementasi Database Transaction pada Pembuatan Order**:
-  Pada fungsi `createOrder`, bungkus penulisan ke tabel `orders` dan penambahan log awal ke tabel `order_status_logs` menggunakan transaksi:
+
+- [x] **3. Implementasi Database Transaction pada Pembuatan & Pembaruan Order (SELESAI)**:
+  Pada fungsi `createOrder` dan `updateOrderStatus` di [`server/services/dbService.ts`](file:///C:/Users/USER/Music/Barangku/server/services/dbService.ts), penulisan data ke tabel `orders` dan pencatatan audit log ke tabel `order_status_logs` telah dibungkus menggunakan transaksi atomik via helper `withTransaction()` di [`server/db/pool.ts`](file:///C:/Users/USER/Music/Barangku/server/db/pool.ts):
   ```sql
   BEGIN;
   INSERT INTO orders (...) VALUES (...);
   INSERT INTO order_status_logs (...) VALUES (...);
   COMMIT;
   ```
-- [ ] **4. Manajemen Migrasi Skema (Opsional / Rekomendasi)**:
-  Untuk mempermudah pembaruan skema di masa depan tanpa menghapus data yang ada, pertimbangkan untuk memasang tool migrasi ringan seperti `node-pg-migrate`, `Knex.js`, atau `Prisma`.
-- [ ] **5. Backup dan Sanitasi Data Produksi**:
-  Menyiapkan script backup otomatis berkala (misal: `pg_dump`) dan aturan retensi log pesanan.
+
+- [x] **4. Manajemen Migrasi & Otomatisasi Setup Skema (SELESAI)**:
+  Telah disediakan script otomatis [`server/db/setupDb.ts`](file:///C:/Users/USER/Music/Barangku/server/db/setupDb.ts) yang dapat dijalankan cukup dengan satu perintah:
+  ```bash
+  npm run db:setup
+  ```
+  Script ini secara otomatis memeriksa database, menginisialisasi ekstensi `pgcrypto` & `postgis`, mengeksekusi skema tabel & indeks, melakukan seeding data bengkel & akun demo, serta memverifikasi versi PostGIS.
+
+- [x] **5. Backup dan Sanitasi Data Produksi (SELESAI)**:
+  Telah disediakan script backup dan sanitasi otomatis di [`server/db/backup.ts`](file:///C:/Users/USER/Music/Barangku/server/db/backup.ts) yang dapat dieksekusi dengan perintah:
+  ```bash
+  npm run db:backup
+  # atau dengan durasi retensi kustom:
+  npm run db:backup -- --retention=30
+  ```
+  Script ini secara otomatis mengekspor snapshot data seluruh tabel ke direktori `backups/` dalam format SQL, serta membersihkan log audit status pesanan yang telah melampaui masa retensi (default: 90 hari).
 
 ---
 

@@ -6,7 +6,7 @@ import { Badge, Button, Chip, TechnicianInfo } from "./DesignSystem"
 
 import { repairSteps } from "./Tracking"
 
-import { getMyOrders, type Order } from "./api"
+import { getMyOrders, type Order, type User } from "./api"
 
 export type ListedOrder = { order: Order; status: number }
 
@@ -16,12 +16,16 @@ export default function MyOrders({
   fresh,
 
   navigate,
+
+  user,
 }: {
   orders?: ListedOrder[]
 
   fresh?: boolean
 
   navigate: (path: string) => void
+
+  user?: User | null
 }) {
   const [emptyDemo, setEmptyDemo] = useState(!!fresh)
 
@@ -38,7 +42,8 @@ export default function MyOrders({
 
     setError("")
 
-    getMyOrders()
+    const contact = user?.contact || user?.phone || user?.email
+    getMyOrders(contact)
 
       .then((res) => {
         if (!isMounted) return
@@ -59,7 +64,7 @@ export default function MyOrders({
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [user?.contact, user?.phone, user?.email, user?.id])
 
   if (loading) {
     return (

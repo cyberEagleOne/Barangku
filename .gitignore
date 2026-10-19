@@ -59,3 +59,7 @@ CLAUDE.md
 /.figma/make/*
 !/.figma/make/site.json
 pnpm-lock.yaml
+
+# Local database backups
+backups/
+scripts/

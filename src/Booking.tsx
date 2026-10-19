@@ -31,6 +31,7 @@ import {
   type BookingDetails,
   type Order,
   type Technician,
+  type User,
 } from "./api"
 
 export type { BookingDetails, Order }
@@ -139,6 +140,8 @@ export default function Booking({
   navigate,
 
   onComplete,
+
+  user,
 }: {
   technician?: Technician
 
@@ -147,6 +150,8 @@ export default function Booking({
   navigate: (path: string) => void
 
   onComplete?: (order: Order) => void
+
+  user?: User | null
 }) {
   const [t, setT] = useState<Technician | null>(propTechnician ?? null)
 
@@ -321,6 +326,10 @@ export default function Booking({
         photoName: photo?.name ?? "",
 
         photoUrl: photoDataUrl || undefined,
+
+        customerName: user?.name || user?.contact,
+
+        customerPhone: user?.phone || user?.contact,
       })
 
       setOrder(created)

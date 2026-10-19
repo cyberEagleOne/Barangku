@@ -1,11 +1,23 @@
 -- ==============================================================================
--- Barangku Database Schema (PostgreSQL + PostGIS)
--- Reference: docs/HANDOFF.md Section 4
+-- Barangku Database Schema (PostgreSQL + PostGIS Optional)
+-- Reference: docs/HANDOFF.md Section 4 & docs/DATABASE_HANDOVER.md
 -- ==============================================================================
 
 -- 1. Extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "postgis";
+
+-- Enable PostGIS if available on this PostgreSQL installation
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'postgis') THEN
+        CREATE EXTENSION IF NOT EXISTS "postgis";
+    ELSE
+        RAISE NOTICE 'Extension postgis is not available in pg_available_extensions, continuing in standard PostgreSQL mode.';
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Could not load postgis extension: %', SQLERRM;
+END $$;
 
 -- 2. Custom Types / Enums
 DO $$ BEGIN
@@ -40,9 +52,8 @@ CREATE TABLE IF NOT EXISTS technicians (
     name VARCHAR(150) NOT NULL,
     area VARCHAR(100) NOT NULL,
     address TEXT,
-    location GEOMETRY(Point, 4326),          -- PostGIS Point (Longitude, Latitude)
-    latitude NUMERIC(10, 7),                 -- Display helper
-    longitude NUMERIC(10, 7),                -- Display helper
+    latitude NUMERIC(10, 7) NOT NULL,
+    longitude NUMERIC(10, 7) NOT NULL,
     devices TEXT[] NOT NULL DEFAULT '{}',    -- ARRAY['Laptop', 'HP']
     rating NUMERIC(2, 1) NOT NULL DEFAULT 0.0,
     review_count INTEGER NOT NULL DEFAULT 0,
@@ -54,6 +65,24 @@ CREATE TABLE IF NOT EXISTS technicians (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Conditionally add geometry column and GiST spatial index if PostGIS is installed
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'technicians' AND column_name = 'location'
+        ) THEN
+            ALTER TABLE technicians ADD COLUMN location GEOMETRY(Point, 4326);
+        END IF;
+        UPDATE technicians SET location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326) WHERE location IS NULL;
+        CREATE INDEX IF NOT EXISTS idx_technicians_location ON technicians USING GIST (location);
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'PostGIS location column setup skipped: %', SQLERRM;
+END $$;
 
 -- 5. Orders Table
 CREATE TABLE IF NOT EXISTS orders (
@@ -104,7 +133,6 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- 8. Indexes & Performance Optimizations
-CREATE INDEX IF NOT EXISTS idx_technicians_location ON technicians USING GIST (location);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_code ON orders (code);
 CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders (customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_technician_status ON orders (technician_id, status);

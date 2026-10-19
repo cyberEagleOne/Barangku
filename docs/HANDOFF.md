@@ -18,6 +18,8 @@ npm install       # Install project dependencies
 npm run dev       # Start Vite development server (default: http://localhost:8443)
 npm run build     # Compile TypeScript and build production bundle into /dist
 npm run preview   # Locally preview production build
+npm run db:setup  # Initialize PostgreSQL database, schema, and seed data
+npm run db:backup # Export database SQL backup to /backups and sanitize old logs
 npm run format    # Run oxfmt code formatter
 ```
 
@@ -35,10 +37,10 @@ All routing in the frontend is currently implemented via window hash navigation 
 | `#pesan/:id` | `Booking` | Protected (Customer) | `getTechnician(id)` | `createOrder(...)` |
 | `#lacak/:code` | `Tracking` | Protected (Customer / Authenticated) | `getOrder(code)` | None |
 | `#pesanan-saya` | `MyOrders` | Protected (Customer) | `getMyOrders()` | None |
-| `#masuk` | `Auth (mode="masuk")` | Public | Reads in-memory users matching identity | `login(identity, password, role)` |
+| `#masuk` | `Auth (mode="masuk")` | Public | Validates against database / memory | `login(identity, password, role)` |
 | `#daftar` | `Auth (mode="daftar")` | Public | None | `register(userData)` |
 | `#lupa-sandi` | `ForgotPassword` (`Auth.tsx`) | Public | None | `requestPasswordReset(identity)` |
-| `#profil` | Profile screen (`App.tsx`) | Protected (Authenticated) | `getCurrentUser()` | `logout()` |
+| `#profil` | Profile screen (`App.tsx`) | Protected (Authenticated) | `getCurrentUser()` | `logout()`, `deleteAccount()` |
 | `#untuk-tukang` | `UntukTukang` | Public | None | None |
 | `#daftar-tukang` | `DaftarTukang` | Public / Customer upgrading | `getCurrentUser()` | `registerTechnicianShop(...)` |
 | `#dashboard-tukang` | `DashboardTukang` | Protected (Technician only) | `getTechnicianOrders()`, `getShopStatus()` | `setShopStatus(...)`, `acceptOrder(code)`, `rejectOrder(code)` |

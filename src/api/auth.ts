@@ -5,6 +5,7 @@ import {
   setAuthToken,
   setCachedUser,
 } from "./client"
+import { inMemoryStore, initialOrders } from "./mockData"
 import type { User, UserRole } from "./types"
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -36,45 +37,23 @@ export async function login(
   password?: string,
   role: UserRole = "pelanggan",
 ): Promise<User> {
-  try {
-    const res = await apiFetch<{ user: User; token: string }>(
-      "/api/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify({ identity, password, role }),
-      },
-    )
+  const res = await apiFetch<{ user: User; token: string }>(
+    "/api/auth/login",
+    {
+      method: "POST",
+      body: JSON.stringify({ identity, password, role }),
+    },
+  )
 
-    if (res.token) {
-      setAuthToken(res.token)
-    }
-    if (res.user) {
-      setCachedUser(res.user)
-      return res.user
-    }
-  } catch (err: any) {
-    console.warn("[auth.login] API call failed, falling back:", err.message)
+  if (res.token) {
+    setAuthToken(res.token)
+  }
+  if (res.user) {
+    setCachedUser(res.user)
+    return res.user
   }
 
-  // Graceful fallback for offline dev/preview
-  const trimmed = identity.trim()
-  const derivedName = trimmed.includes("@")
-    ? trimmed.split("@")[0].replace(/[._-]/g, " ").trim() || "Kamu"
-    : role === "tukang"
-      ? "Mas Dedi"
-      : "Pelanggan Barangku"
-
-  const fallbackUser: User = {
-    id: `user-${Date.now()}`,
-    name: derivedName,
-    contact: trimmed,
-    email: trimmed.includes("@") ? trimmed : undefined,
-    phone: !trimmed.includes("@") ? trimmed : undefined,
-    role,
-    fresh: false,
-  }
-  setCachedUser(fallbackUser)
-  return fallbackUser
+  throw new Error("Gagal memproses data akun.")
 }
 
 export async function register(userData: {
@@ -85,39 +64,23 @@ export async function register(userData: {
   password?: string
   agreed?: boolean
 }): Promise<User> {
-  try {
-    const res = await apiFetch<{ user: User; token: string }>(
-      "/api/auth/register",
-      {
-        method: "POST",
-        body: JSON.stringify(userData),
-      },
-    )
+  const res = await apiFetch<{ user: User; token: string }>(
+    "/api/auth/register",
+    {
+      method: "POST",
+      body: JSON.stringify(userData),
+    },
+  )
 
-    if (res.token) {
-      setAuthToken(res.token)
-    }
-    if (res.user) {
-      setCachedUser(res.user)
-      return res.user
-    }
-  } catch (err: any) {
-    console.warn("[auth.register] API call failed, falling back:", err.message)
+  if (res.token) {
+    setAuthToken(res.token)
+  }
+  if (res.user) {
+    setCachedUser(res.user)
+    return res.user
   }
 
-  const contact =
-    userData.email?.trim() || userData.phone?.trim() || "0812-0000-0000"
-  const fallbackUser: User = {
-    id: `user-${Date.now()}`,
-    name: userData.name.trim(),
-    contact,
-    email: userData.email?.trim(),
-    phone: userData.phone?.trim(),
-    role: userData.role,
-    fresh: true,
-  }
-  setCachedUser(fallbackUser)
-  return fallbackUser
+  throw new Error("Gagal mendaftarkan akun.")
 }
 
 export async function logout(): Promise<void> {
@@ -128,6 +91,22 @@ export async function logout(): Promise<void> {
   } finally {
     setAuthToken(null)
     setCachedUser(null)
+    inMemoryStore.orders = [...initialOrders]
+    inMemoryStore.currentUser = null
+  }
+}
+
+export async function deleteAccount(): Promise<void> {
+  try {
+    await apiFetch("/api/auth/me", { method: "DELETE" })
+  } catch (err) {
+    console.warn("[auth.deleteAccount] error:", err)
+    throw err
+  } finally {
+    setAuthToken(null)
+    setCachedUser(null)
+    inMemoryStore.orders = [...initialOrders]
+    inMemoryStore.currentUser = null
   }
 }
 

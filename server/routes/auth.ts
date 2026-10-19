@@ -76,35 +76,25 @@ authRouter.post("/login", async (req, res: Response) => {
     }
 
     const trimmed = identity.trim()
-    let user = await dbService.getUserByIdentity(trimmed)
+    const user = await dbService.getUserByIdentity(trimmed)
 
-    // If user exists and password is provided, verify password
-    if (user && user.password_hash && password) {
+    if (!user) {
+      return res.status(404).json({
+        error: "Akun belum terdaftar. Silakan daftar akun baru terlebih dahulu.",
+      })
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: "Kata sandi wajib diisi." })
+    }
+
+    if (user.password_hash) {
       const match = await comparePassword(password, user.password_hash)
       if (!match) {
         return res
           .status(401)
           .json({ error: "Kata sandi salah. Silakan coba lagi." })
       }
-    }
-
-    // Auto-create friendly session user if not existing yet (smooth onboarding)
-    if (!user) {
-      const derivedName = trimmed.includes("@")
-        ? trimmed.split("@")[0].replace(/[._-]/g, " ").trim() || "Kamu"
-        : role === "tukang"
-          ? "Mas Dedi"
-          : "Pelanggan Barangku"
-
-      const passwordHash = await hashPassword(password || "password123")
-      user = await dbService.createUser({
-        name: derivedName,
-        email: trimmed.includes("@") ? trimmed : undefined,
-        phone: !trimmed.includes("@") ? trimmed : undefined,
-        passwordHash,
-        role,
-        fresh: false,
-      })
     }
 
     const token = generateToken({
@@ -184,3 +174,28 @@ authRouter.post("/forgot-password", (req, res: Response) => {
     message: "Tautan pemulihan kata sandi telah dikirim ke " + identity,
   })
 })
+
+// DELETE /api/auth/me
+authRouter.delete(
+  "/me",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Belum masuk." })
+      }
+
+      const deleted = await dbService.deleteUser(req.user.id)
+      if (!deleted) {
+        return res.status(404).json({ error: "Akun tidak ditemukan." })
+      }
+
+      return res.json({ success: true, message: "Akun berhasil dihapus." })
+    } catch (error: any) {
+      console.error("[auth.deleteMe] Error:", error)
+      return res
+        .status(500)
+        .json({ error: error.message || "Gagal menghapus akun." })
+    }
+  },
+)

@@ -3,15 +3,15 @@
 -- ==============================================================================
 
 -- 1. Insert Initial Users (password is 'password123', hashed with bcrypt)
--- Hash generated for 'password123': $2a$10$wT0q2q7Q6j2b.aE1rNqYEu6Lff.u.5c3HnQj5jTqF7eZ6m6w.QG2a
+-- Hash generated for 'password123': $2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK
 INSERT INTO users (id, name, email, phone, password_hash, role)
 VALUES 
-    ('00000000-0000-0000-0000-000000000001', 'Rina Ayu', 'rina@email.com', '0812-0000-0001', '$2a$10$wT0q2q7Q6j2b.aE1rNqYEu6Lff.u.5c3HnQj5jTqF7eZ6m6w.QG2a', 'pelanggan'),
-    ('00000000-0000-0000-0000-000000000002', 'Mas Dedi Servis', 'dedi@barangku.id', '0812-0000-0000', '$2a$10$wT0q2q7Q6j2b.aE1rNqYEu6Lff.u.5c3HnQj5jTqF7eZ6m6w.QG2a', 'tukang')
+    ('00000000-0000-0000-0000-000000000001', 'Rina Ayu', 'rina@email.com', '0812-0000-0001', '$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK', 'pelanggan'),
+    ('00000000-0000-0000-0000-000000000002', 'Mas Dedi Servis', 'dedi@barangku.id', '0812-0000-0000', '$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK', 'tukang')
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Insert Technicians
-INSERT INTO technicians (id, user_id, name, area, address, location, latitude, longitude, devices, rating, review_count, min_price, max_price, status, verified, photo_url)
+INSERT INTO technicians (id, user_id, name, area, address, latitude, longitude, devices, rating, review_count, min_price, max_price, status, verified, photo_url)
 VALUES 
 (
     1,
@@ -19,7 +19,6 @@ VALUES
     'Mas Dedi Servis',
     'Karawaci',
     'Jl. Imam Bonjol No. 24, Karawaci, Kota Tangerang',
-    ST_SetSRID(ST_MakePoint(106.6150, -6.1950), 4326),
     -6.1950,
     106.6150,
     ARRAY['Laptop'],
@@ -37,7 +36,6 @@ VALUES
     'Kang Arif Laptop',
     'Cikokol',
     'Jl. Teuku Umar No. 18, Cikokol, Kota Tangerang',
-    ST_SetSRID(ST_MakePoint(106.6400, -6.1850), 4326),
     -6.1850,
     106.6400,
     ARRAY['Laptop'],
@@ -55,7 +53,6 @@ VALUES
     'Bengkel HP Bu Sari',
     'Bencongan',
     'Jl. Borobudur No. 12, Bencongan, Kelapa Dua, Tangerang',
-    ST_SetSRID(ST_MakePoint(106.5950, -6.2150), 4326),
     -6.2150,
     106.5950,
     ARRAY['HP'],
@@ -73,7 +70,6 @@ VALUES
     'Pak Agus Elektronik',
     'Kelapa Dua',
     'Jl. Raya Kelapa Dua No. 35, Kelapa Dua, Tangerang',
-    ST_SetSRID(ST_MakePoint(106.6050, -6.2300), 4326),
     -6.2300,
     106.6050,
     ARRAY['Laptop', 'HP'],
@@ -91,7 +87,6 @@ VALUES
     'Rizky Servis HP',
     'Cibodas',
     'Jl. Prambanan Raya No. 8, Cibodas, Kota Tangerang',
-    ST_SetSRID(ST_MakePoint(106.5850, -6.1800), 4326),
     -6.1800,
     106.5850,
     ARRAY['HP'],
@@ -109,7 +104,6 @@ VALUES
     'Bima Komputer',
     'Gading Serpong',
     'Jl. Boulevard Gading Serpong No. 16, Tangerang',
-    ST_SetSRID(ST_MakePoint(106.6280, -6.2450), 4326),
     -6.2450,
     106.6280,
     ARRAY['Laptop'],
@@ -127,7 +121,6 @@ VALUES
     'BSD Gadget Care',
     'BSD City',
     'Ruko Golden Boulevard Blok W2 No. 15, BSD City, Serpong',
-    ST_SetSRID(ST_MakePoint(106.6535, -6.3015), 4326),
     -6.3015,
     106.6535,
     ARRAY['Laptop', 'HP'],
@@ -140,6 +133,16 @@ VALUES
     'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Populate geometry column if PostGIS extension exists
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+        UPDATE technicians SET location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326) WHERE location IS NULL;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END $$;
 
 -- 3. Initial Reviews
 INSERT INTO reviews (technician_id, reviewer_name, rating, review_text, service)

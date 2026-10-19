@@ -41,6 +41,7 @@ import Auth, {
 import {
   getCurrentUser,
   logout as apiLogout,
+  deleteAccount as apiDeleteAccount,
   searchTechnicians,
   type User,
 } from "./api"
@@ -773,11 +774,27 @@ export default function App() {
 
       setUser(null)
 
-      setNotice("Kamu sudah keluar dari akun demo.")
+      setNotice("Kamu sudah keluar dari akun.")
 
       go("beranda")
     } catch {
       setNotice("Ada yang salah. Coba lagi ya.")
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Apakah kamu yakin ingin menghapus akun ini secara permanen? Seluruh riwayat dan data akun kamu akan dihapus.",
+    )
+    if (!confirmed) return
+
+    try {
+      await apiDeleteAccount()
+      setUser(null)
+      setNotice("Akun kamu berhasil dihapus.")
+      go("beranda")
+    } catch (err: any) {
+      setNotice(err?.message || "Gagal menghapus akun. Coba lagi ya.")
     }
   }
 
@@ -833,7 +850,14 @@ export default function App() {
   else if (page === "lupa-sandi")
     content = <ForgotPassword key={route} next={next} />
   else if (page === "pesanan-saya")
-    content = <MyOrders key={user?.name} fresh={!!user?.fresh} navigate={go} />
+    content = (
+      <MyOrders
+        key={user?.id || user?.contact || "guest"}
+        user={user}
+        fresh={!!user?.fresh}
+        navigate={go}
+      />
+    )
   else if (page === "profil")
     content = (
       <main className="container placeholder-page profile-page">
@@ -842,12 +866,32 @@ export default function App() {
           <h2>{user?.name}</h2>
           <p>{user?.contact}</p>
           <p className="small-text">
-            Akun demo ·{" "}
             {user?.role === "tukang" ? "Tukang servis" : "Pelanggan"}
           </p>
-          <Button variant="secondary" onClick={logout}>
-            Keluar
-          </Button>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              marginTop: "24px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <Button variant="secondary" onClick={logout}>
+              Keluar
+            </Button>
+            <Button
+              variant="secondary"
+              style={{
+                color: "var(--error-dark, #a82e2e)",
+                borderColor: "var(--error, #d64545)",
+                backgroundColor: "transparent",
+              }}
+              onClick={handleDeleteAccount}
+            >
+              Hapus Akun
+            </Button>
+          </div>
         </div>
       </main>
     )
@@ -872,7 +916,12 @@ export default function App() {
     )
   else if (page.startsWith("pesan/"))
     content = (
-      <Booking key={route} id={Number(page.split("/")[1])} navigate={go} />
+      <Booking
+        key={route}
+        id={Number(page.split("/")[1])}
+        user={user}
+        navigate={go}
+      />
     )
   else if (page.startsWith("lacak/"))
     content = <Tracking key={route} code={page.split("/")[1]} navigate={go} />

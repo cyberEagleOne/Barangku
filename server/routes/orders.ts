@@ -60,8 +60,14 @@ ordersRouter.get(
   optionalAuth,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userContact = req.query.userContact as string || req.user?.contact
-      const orders = await dbService.getMyOrders(userContact, req.user?.id)
+      const userContact = (req.query.userContact as string) || req.user?.contact
+      const userId = req.user?.id
+
+      if (!userContact && !userId) {
+        return res.json([])
+      }
+
+      const orders = await dbService.getMyOrders(userContact, userId)
       return res.json(orders)
     } catch (error: any) {
       console.error("[orders.my] Error:", error)

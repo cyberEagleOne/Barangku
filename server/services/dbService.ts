@@ -1,5 +1,5 @@
 import { config } from "../config"
-import { isPostgresAvailable, query } from "../db/pool"
+import { isPostgresAvailable, query, withTransaction } from "../db/pool"
 
 export interface UserEntity {
   id: string
@@ -95,7 +95,7 @@ const memoryUsers: UserEntity[] = [
     email: "rina@email.com",
     phone: "0812-0000-0001",
     password_hash:
-      "$2a$10$wT0q2q7Q6j2b.aE1rNqYEu6Lff.u.5c3HnQj5jTqF7eZ6m6w.QG2a", // password123
+      "$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK", // password123
     role: "pelanggan",
     fresh: false,
   },
@@ -106,7 +106,7 @@ const memoryUsers: UserEntity[] = [
     email: "dedi@barangku.id",
     phone: "0812-0000-0000",
     password_hash:
-      "$2a$10$wT0q2q7Q6j2b.aE1rNqYEu6Lff.u.5c3HnQj5jTqF7eZ6m6w.QG2a", // password123
+      "$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK", // password123
     role: "tukang",
     fresh: false,
   },
@@ -446,9 +446,9 @@ function computeDistanceKm(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2)
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return Math.round(R * c * 10) / 10
 }
@@ -575,6 +575,32 @@ export const dbService = {
     }
     memoryUsers.push(newUser)
     return newUser
+  },
+
+  async deleteUser(id: string): Promise<boolean> {
+    if (isPostgresAvailable()) {
+      try {
+        // Lepas referensi log audit status pesanan agar constraint foreign key terpenuhi
+        await query(
+          "UPDATE order_status_logs SET changed_by = NULL WHERE changed_by = $1",
+          [id],
+        )
+        // Jika pengguna memiliki data teknisi terkait, hapus record teknisi
+        await query("DELETE FROM technicians WHERE user_id = $1", [id])
+        // Hapus akun dari tabel users
+        const res = await query("DELETE FROM users WHERE id = $1 RETURNING id", [id])
+        return (res.rowCount ?? 0) > 0
+      } catch (err) {
+        console.error("[dbService.deleteUser] Postgres error:", err)
+      }
+    }
+
+    const index = memoryUsers.findIndex((u) => u.id === id)
+    if (index !== -1) {
+      memoryUsers.splice(index, 1)
+      return true
+    }
+    return false
   },
 
   // -------------------------------------------------------------------------
@@ -1092,6 +1118,10 @@ export const dbService = {
     userContact?: string,
     customerId?: string,
   ): Promise<OrderEntity[]> {
+    if (!userContact && !customerId) {
+      return []
+    }
+
     if (isPostgresAvailable()) {
       try {
         const res = await query(
@@ -1107,7 +1137,10 @@ export const dbService = {
              t.status as "shopStatus", t.verified as "shopVerified", t.photo_url as "shopPhoto"
            FROM orders o
            JOIN technicians t ON t.id = o.technician_id
-           WHERE ($1::text IS NULL OR o.customer_phone = $1 OR o.customer_id::text = $2)
+           WHERE (
+             ($1::text IS NOT NULL AND (o.customer_phone = $1 OR o.customer_name = $1))
+             OR ($2::text IS NOT NULL AND o.customer_id::text = $2)
+           )
            ORDER BY o.created_at DESC`,
           [userContact || null, customerId || null],
         )
@@ -1159,12 +1192,15 @@ export const dbService = {
       }
     }
 
-    const list = memoryOrders.filter(
-      (o) =>
-        !o.incoming ||
-        o.isCustomerOrder ||
-        (userContact && o.customerPhone === userContact),
-    )
+    const list = memoryOrders.filter((o) => {
+      const matchContact =
+        userContact &&
+        (o.customerPhone === userContact || o.customerName === userContact)
+      const matchId =
+        customerId &&
+        (o.customerId === customerId || (o as any).id === customerId)
+      return matchContact || matchId
+    })
     return [...list]
   },
 
@@ -1277,42 +1313,44 @@ export const dbService = {
 
     if (isPostgresAvailable()) {
       try {
-        const res = await query(
-          `INSERT INTO orders (
-            code, customer_id, customer_name, customer_phone, technician_id,
-            device, model, problem, notes, visit_date, visit_time, photo_name,
-            status, estimate_min, estimate_max, message, rejected, incoming
-          ) VALUES (
-            $1, $2, $3, $4, $5,
-            $6, $7, $8, $9, $10, $11, $12,
-            0, $13, $14, 'Pesanan masuk, menunggu konfirmasi tukang.', false, true
-          ) RETURNING id`,
-          [
-            code,
-            data.customerId || null,
-            customerName,
-            customerPhone,
-            tech.id,
-            data.details.device,
-            data.details.model,
-            data.details.problem,
-            data.details.notes || "",
-            data.details.date,
-            data.details.time,
-            photoName,
-            tech.min,
-            tech.max,
-          ],
-        )
-
-        if (res.rows.length > 0) {
-          // Log initial status in order_status_logs (docs/HANDOFF.md Section 4.2)
-          await query(
-            `INSERT INTO order_status_logs (order_id, previous_status, new_status, note, changed_by)
-             VALUES ($1, NULL, 0, 'Pesanan dibuat oleh pelanggan', $2)`,
-            [res.rows[0].id, data.customerId || null],
+        await withTransaction(async (client) => {
+          const res = await client.query(
+            `INSERT INTO orders (
+              code, customer_id, customer_name, customer_phone, technician_id,
+              device, model, problem, notes, visit_date, visit_time, photo_name,
+              status, estimate_min, estimate_max, message, rejected, incoming
+            ) VALUES (
+              $1, $2, $3, $4, $5,
+              $6, $7, $8, $9, $10, $11, $12,
+              0, $13, $14, 'Pesanan masuk, menunggu konfirmasi tukang.', false, true
+            ) RETURNING id`,
+            [
+              code,
+              data.customerId || null,
+              customerName,
+              customerPhone,
+              tech.id,
+              data.details.device,
+              data.details.model,
+              data.details.problem,
+              data.details.notes || "",
+              data.details.date,
+              data.details.time,
+              photoName,
+              tech.min,
+              tech.max,
+            ],
           )
-        }
+
+          if (res.rows.length > 0) {
+            // Log initial status in order_status_logs (docs/HANDOFF.md Section 4.2)
+            await client.query(
+              `INSERT INTO order_status_logs (order_id, previous_status, new_status, note, changed_by)
+               VALUES ($1, NULL, 0, 'Pesanan dibuat oleh pelanggan', $2)`,
+              [res.rows[0].id, data.customerId || null],
+            )
+          }
+        })
       } catch (err) {
         console.error("[dbService.createOrder] Postgres error:", err)
       }
@@ -1410,57 +1448,59 @@ export const dbService = {
     const existingLogs = existing.statusLogs && existing.statusLogs.length > 0
       ? existing.statusLogs
       : [
-          {
-            status: 0,
-            label: "Dipesan",
-            timestamp: now.toISOString(),
-            date: now.toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }),
-            time: now
-              .toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-              .replace(":", "."),
-            note: "Pesanan masuk.",
-          },
-        ]
+        {
+          status: 0,
+          label: "Dipesan",
+          timestamp: now.toISOString(),
+          date: now.toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          time: now
+            .toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+            .replace(":", "."),
+          note: "Pesanan masuk.",
+        },
+      ]
 
     const updatedLogs = [...existingLogs, nextLog]
 
     if (isPostgresAvailable()) {
       try {
-        const res = await query(
-          `UPDATE orders
-           SET status = $1, estimate_min = $2, estimate_max = $3, message = $4,
-               rejected = $5, incoming = $6, updated_at = NOW()
-           WHERE code = $7
-           RETURNING id`,
-          [
-            status,
-            newEstimateMin,
-            newEstimateMax,
-            newMessage,
-            newRejected,
-            newIncoming,
-            code,
-          ],
-        )
-
-        if (res.rows.length > 0) {
-          // Log status transition audit log (docs/HANDOFF.md Section 4.2)
-          await query(
-            `INSERT INTO order_status_logs (order_id, previous_status, new_status, note, changed_by)
-             VALUES ($1, $2, $3, $4, $5)`,
+        await withTransaction(async (client) => {
+          const res = await client.query(
+            `UPDATE orders
+             SET status = $1, estimate_min = $2, estimate_max = $3, message = $4,
+                 rejected = $5, incoming = $6, updated_at = NOW()
+             WHERE code = $7
+             RETURNING id`,
             [
-              res.rows[0].id,
-              previousStatus,
               status,
-              newMessage || `Status diubah ke ${status}`,
-              changedByUserId || null,
+              newEstimateMin,
+              newEstimateMax,
+              newMessage,
+              newRejected,
+              newIncoming,
+              code,
             ],
           )
-        }
+
+          if (res.rows.length > 0) {
+            // Log status transition audit log (docs/HANDOFF.md Section 4.2)
+            await client.query(
+              `INSERT INTO order_status_logs (order_id, previous_status, new_status, note, changed_by)
+               VALUES ($1, $2, $3, $4, $5)`,
+              [
+                res.rows[0].id,
+                previousStatus,
+                status,
+                newMessage || `Status diubah ke ${status}`,
+                changedByUserId || null,
+              ],
+            )
+          }
+        })
       } catch (err) {
         console.error("[dbService.updateOrderStatus] Postgres error:", err)
       }

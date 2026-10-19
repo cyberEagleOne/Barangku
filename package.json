@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "tsx server/index.ts",
+    "db:setup": "tsx server/db/setupDb.ts",
+    "db:backup": "tsx server/db/backup.ts",
     "format": "oxfmt"
   },
   "dependencies": {

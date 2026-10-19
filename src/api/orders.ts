@@ -1,4 +1,4 @@
-import { apiFetch } from "./client"
+import { apiFetch, getCachedUser } from "./client"
 import { inMemoryStore, initialTechnicians } from "./mockData"
 import type { BookingDetails, Order, OrderStatus, Technician } from "./types"
 
@@ -22,9 +22,15 @@ export async function getOrder(code: string): Promise<Order | null> {
 }
 
 export async function getMyOrders(userContact?: string): Promise<Order[]> {
+  const effectiveContact =
+    userContact ||
+    getCachedUser()?.contact ||
+    getCachedUser()?.phone ||
+    getCachedUser()?.email
+
   try {
-    const query = userContact
-      ? `?userContact=${encodeURIComponent(userContact)}`
+    const query = effectiveContact
+      ? `?userContact=${encodeURIComponent(effectiveContact)}`
       : ""
     const data = await apiFetch<Order[]>(`/api/orders/my${query}`)
     if (Array.isArray(data)) {
@@ -37,10 +43,17 @@ export async function getMyOrders(userContact?: string): Promise<Order[]> {
     )
   }
 
-  // Returns customer orders (completed/accepted initial orders plus orders created by the customer)
-  const list = inMemoryStore.orders.filter(
-    (o) => !o.incoming || (o as any).isCustomerOrder,
-  )
+  if (!effectiveContact) {
+    return []
+  }
+
+  const normalized = effectiveContact.trim().toLowerCase()
+  const list = inMemoryStore.orders.filter((o) => {
+    const phone = o.customerPhone?.trim().toLowerCase()
+    const name = o.customerName?.trim().toLowerCase()
+    const id = (o as any).customerId?.trim().toLowerCase()
+    return phone === normalized || name === normalized || id === normalized
+  })
   return [...list]
 }
 
@@ -73,8 +86,22 @@ export async function createOrder(data: {
   photoUrl?: string
   customerName?: string
   customerPhone?: string
+  customerId?: string
   code?: string
 }): Promise<Order> {
+  const cachedUser = getCachedUser()
+  const finalCustomerName =
+    data.customerName ||
+    cachedUser?.name ||
+    cachedUser?.contact ||
+    "Pelanggan"
+  const finalCustomerPhone =
+    data.customerPhone ||
+    cachedUser?.phone ||
+    cachedUser?.contact ||
+    "0812-0000-0000"
+  const finalCustomerId = data.customerId || cachedUser?.id
+
   try {
     const result = await apiFetch<Order>("/api/orders", {
       method: "POST",
@@ -84,18 +111,24 @@ export async function createOrder(data: {
         details: data.details,
         photoName: data.photoName,
         photoUrl: data.photoUrl,
-        customerName: data.customerName,
-        customerPhone: data.customerPhone,
+        customerName: finalCustomerName,
+        customerPhone: finalCustomerPhone,
         code: data.code,
       }),
     })
     if (result && result.code) {
+      const orderWithUser = {
+        ...result,
+        customerId: finalCustomerId,
+        customerName: finalCustomerName,
+        customerPhone: finalCustomerPhone,
+      }
       // Also cache in local memory store for instant cross-tab/memory sync
       inMemoryStore.orders = [
-        result,
+        orderWithUser,
         ...inMemoryStore.orders.filter((o) => o.code !== result.code),
       ]
-      return result
+      return orderWithUser
     }
   } catch (err: any) {
     console.warn(
@@ -109,7 +142,7 @@ export async function createOrder(data: {
   const tech = data.technician || initialTechnicians[0]
   const now = new Date()
 
-  const newOrder: Order & { isCustomerOrder?: boolean } = {
+  const newOrder: Order & { isCustomerOrder?: boolean; customerId?: string } = {
     code,
     technician: tech,
     technicianId: tech.id,
@@ -123,8 +156,9 @@ export async function createOrder(data: {
     message: "Pesanan masuk, menunggu konfirmasi tukang.",
     incoming: true,
     rejected: false,
-    customerName: data.customerName || "Pelanggan",
-    customerPhone: data.customerPhone || "0812-0000-0000",
+    customerName: finalCustomerName,
+    customerPhone: finalCustomerPhone,
+    customerId: finalCustomerId,
     device: data.details.device,
     model: data.details.model,
     damage: data.details.problem,

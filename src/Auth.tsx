@@ -266,8 +266,8 @@ export default function Auth({
           : "pesanan-saya"
 
       onLogin(loggedUser, dest)
-    } catch {
-      setApiError("Ada yang salah. Coba lagi ya.")
+    } catch (err: any) {
+      setApiError(err?.message || "Ada yang salah. Coba lagi ya.")
     } finally {
       setLoading(false)
     }
@@ -302,8 +302,8 @@ export default function Auth({
       })
 
       onLogin(newUser, role === "tukang" ? "daftar-tukang" : destination)
-    } catch {
-      setApiError("Ada yang salah. Coba lagi ya.")
+    } catch (err: any) {
+      setApiError(err?.message || "Ada yang salah. Coba lagi ya.")
     } finally {
       setLoading(false)
     }
