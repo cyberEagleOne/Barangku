@@ -175,27 +175,3 @@ authRouter.post("/forgot-password", (req, res: Response) => {
   })
 })
 
-// DELETE /api/auth/me
-authRouter.delete(
-  "/me",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ error: "Belum masuk." })
-      }
-
-      const deleted = await dbService.deleteUser(req.user.id)
-      if (!deleted) {
-        return res.status(404).json({ error: "Akun tidak ditemukan." })
-      }
-
-      return res.json({ success: true, message: "Akun berhasil dihapus." })
-    } catch (error: any) {
-      console.error("[auth.deleteMe] Error:", error)
-      return res
-        .status(500)
-        .json({ error: error.message || "Gagal menghapus akun." })
-    }
-  },
-)

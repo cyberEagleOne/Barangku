@@ -41,7 +41,6 @@ import Auth, {
 import {
   getCurrentUser,
   logout as apiLogout,
-  deleteAccount as apiDeleteAccount,
   searchTechnicians,
   type User,
 } from "./api"
@@ -782,22 +781,6 @@ export default function App() {
     }
   }
 
-  const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Apakah kamu yakin ingin menghapus akun ini secara permanen? Seluruh riwayat dan data akun kamu akan dihapus.",
-    )
-    if (!confirmed) return
-
-    try {
-      await apiDeleteAccount()
-      setUser(null)
-      setNotice("Akun kamu berhasil dihapus.")
-      go("beranda")
-    } catch (err: any) {
-      setNotice(err?.message || "Gagal menghapus akun. Coba lagi ya.")
-    }
-  }
-
   let content
 
   if (userLoading && isProtectedRoute(page)) {
@@ -868,30 +851,9 @@ export default function App() {
           <p className="small-text">
             {user?.role === "tukang" ? "Tukang servis" : "Pelanggan"}
           </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              marginTop: "24px",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <Button variant="secondary" onClick={logout}>
-              Keluar
-            </Button>
-            <Button
-              variant="secondary"
-              style={{
-                color: "var(--error-dark, #a82e2e)",
-                borderColor: "var(--error, #d64545)",
-                backgroundColor: "transparent",
-              }}
-              onClick={handleDeleteAccount}
-            >
-              Hapus Akun
-            </Button>
-          </div>
+          <Button variant="secondary" onClick={logout}>
+            Keluar
+          </Button>
         </div>
       </main>
     )

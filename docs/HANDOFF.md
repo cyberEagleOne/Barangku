@@ -40,7 +40,7 @@ All routing in the frontend is currently implemented via window hash navigation 
 | `#masuk` | `Auth (mode="masuk")` | Public | Validates against database / memory | `login(identity, password, role)` |
 | `#daftar` | `Auth (mode="daftar")` | Public | None | `register(userData)` |
 | `#lupa-sandi` | `ForgotPassword` (`Auth.tsx`) | Public | None | `requestPasswordReset(identity)` |
-| `#profil` | Profile screen (`App.tsx`) | Protected (Authenticated) | `getCurrentUser()` | `logout()`, `deleteAccount()` |
+| `#profil` | Profile screen (`App.tsx`) | Protected (Authenticated) | `getCurrentUser()` | `logout()` |
 | `#untuk-tukang` | `UntukTukang` | Public | None | None |
 | `#daftar-tukang` | `DaftarTukang` | Public / Customer upgrading | `getCurrentUser()` | `registerTechnicianShop(...)` |
 | `#dashboard-tukang` | `DashboardTukang` | Protected (Technician only) | `getTechnicianOrders()`, `getShopStatus()` | `setShopStatus(...)`, `acceptOrder(code)`, `rejectOrder(code)` |

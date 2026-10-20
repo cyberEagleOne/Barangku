@@ -577,32 +577,6 @@ export const dbService = {
     return newUser
   },
 
-  async deleteUser(id: string): Promise<boolean> {
-    if (isPostgresAvailable()) {
-      try {
-        // Lepas referensi log audit status pesanan agar constraint foreign key terpenuhi
-        await query(
-          "UPDATE order_status_logs SET changed_by = NULL WHERE changed_by = $1",
-          [id],
-        )
-        // Jika pengguna memiliki data teknisi terkait, hapus record teknisi
-        await query("DELETE FROM technicians WHERE user_id = $1", [id])
-        // Hapus akun dari tabel users
-        const res = await query("DELETE FROM users WHERE id = $1 RETURNING id", [id])
-        return (res.rowCount ?? 0) > 0
-      } catch (err) {
-        console.error("[dbService.deleteUser] Postgres error:", err)
-      }
-    }
-
-    const index = memoryUsers.findIndex((u) => u.id === id)
-    if (index !== -1) {
-      memoryUsers.splice(index, 1)
-      return true
-    }
-    return false
-  },
-
   // -------------------------------------------------------------------------
   // Technicians & Workshops
   // -------------------------------------------------------------------------

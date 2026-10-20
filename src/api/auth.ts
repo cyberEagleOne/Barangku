@@ -96,20 +96,6 @@ export async function logout(): Promise<void> {
   }
 }
 
-export async function deleteAccount(): Promise<void> {
-  try {
-    await apiFetch("/api/auth/me", { method: "DELETE" })
-  } catch (err) {
-    console.warn("[auth.deleteAccount] error:", err)
-    throw err
-  } finally {
-    setAuthToken(null)
-    setCachedUser(null)
-    inMemoryStore.orders = [...initialOrders]
-    inMemoryStore.currentUser = null
-  }
-}
-
 export async function requestPasswordReset(identity: string): Promise<void> {
   try {
     await apiFetch("/api/auth/forgot-password", {
