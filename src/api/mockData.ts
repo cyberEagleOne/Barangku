@@ -501,6 +501,15 @@ export const initialOrders: Order[] = [
 
 export const mockUsers: User[] = [
   {
+    id: "user-demo",
+    name: "Demo Pengguna",
+    contact: "0812-9999-0001",
+    email: "demo@gmail.com",
+    phone: "0812-9999-0001",
+    role: "pelanggan",
+    fresh: false,
+  },
+  {
     id: "user-1",
 
     name: "Rina Ayu",

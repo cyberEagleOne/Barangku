@@ -6,6 +6,7 @@
 -- Hash generated for 'password123': $2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK
 INSERT INTO users (id, name, email, phone, password_hash, role)
 VALUES 
+    ('00000000-0000-0000-0000-000000000099', 'Demo Pengguna', 'demo@gmail.com', '0812-9999-0001', '$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK', 'pelanggan'),
     ('00000000-0000-0000-0000-000000000001', 'Rina Ayu', 'rina@email.com', '0812-0000-0001', '$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK', 'pelanggan'),
     ('00000000-0000-0000-0000-000000000002', 'Mas Dedi Servis', 'dedi@barangku.id', '0812-0000-0000', '$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK', 'tukang')
 ON CONFLICT (id) DO NOTHING;

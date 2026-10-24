@@ -799,10 +799,17 @@ export default function App() {
     content = user ? (
       <main className="container placeholder-page">
         <h1>Kamu sudah masuk.</h1>
-        <p>Akun demo kamu siap dipakai.</p>
-        <Button onClick={() => go(safeReturnRoute(next ?? null))}>
-          Lanjut <ArrowRight size={18} />
-        </Button>
+        <p style={{ marginTop: "8px" }}>
+          Sedang masuk sebagai <strong>{user.name}</strong> ({user.email || user.contact}).
+        </p>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px", flexWrap: "wrap" }}>
+          <Button onClick={() => go(safeReturnRoute(next ?? null))}>
+            Lanjut ke {user.role === "tukang" ? "Dashboard" : "Cara Kerja"} <ArrowRight size={18} />
+          </Button>
+          <Button variant="secondary" onClick={logout}>
+            Keluar / Ganti Akun
+          </Button>
+        </div>
       </main>
     ) : (
       <Auth

@@ -135,7 +135,7 @@ async function runSetup() {
 
     console.log("\n✨ DATABASE SIAP DIGUNAKAN DENGAN SEMPURNA! ✨")
     console.log("Akun Demo:")
-    console.log("  - Pelanggan : rina@email.com / password123")
+    console.log("  - Pelanggan : demo@gmail.com / password123 (atau rina@email.com)")
     console.log("  - Teknisi   : dedi@barangku.id / password123\n")
   } catch (err: any) {
     console.error("\n❌ Gagal menyiapkan database:", err.message)

@@ -293,7 +293,7 @@ psql -U postgres -d barangku -f server/db/seed.sql
 ```
 
 > **Akun Demo Default (setelah seeding):**
-> - **Pelanggan**: `rina@email.com` / Sandi: `password123`
+> - **Pelanggan**: `demo@gmail.com` / Sandi: `password123` (alternatif: `rina@email.com` / `password123`)
 > - **Teknisi**: `dedi@barangku.id` / Sandi: `password123`
 
 ---

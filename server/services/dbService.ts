@@ -89,6 +89,17 @@ export interface OrderEntity {
 // ---------------------------------------------------------------------------
 const memoryUsers: UserEntity[] = [
   {
+    id: "user-demo",
+    name: "Demo Pengguna",
+    contact: "0812-9999-0001",
+    email: "demo@gmail.com",
+    phone: "0812-9999-0001",
+    password_hash:
+      "$2b$10$ErKPCsv38cdZ90CeFoPo7.2OMQzHHfgNCiNbYxtav.cSb0lu8rngK", // password123
+    role: "pelanggan",
+    fresh: false,
+  },
+  {
     id: "user-1",
     name: "Rina Ayu",
     contact: "0812-0000-0001",
@@ -313,6 +324,37 @@ const memoryReviews: Record<number, ReviewEntity[]> = {
 }
 
 const memoryOrders: OrderEntity[] = [
+  {
+    code: "BRK-2026-0150",
+    technician: memoryTechnicians[0],
+    technicianId: 1,
+    customerId: "user-demo",
+    shop: "Mas Dedi Servis",
+    device: "Laptop",
+    model: "Lenovo ThinkPad T14",
+    damage: "Keyboard beberapa tombol tidak merespon",
+    customerName: "Demo Pengguna",
+    customerPhone: "0812-9999-0001",
+    status: 2,
+    estimateMin: 180000,
+    estimateMax: 350000,
+    message:
+      "Laptop kamu sedang dalam tahap pengecekan. Suku cadang modul keyboard siap diganti.",
+    date: "2026-10-24",
+    time: "10:30",
+    incoming: false,
+    rejected: false,
+    photoName: "",
+    details: {
+      device: "Laptop",
+      model: "Lenovo ThinkPad T14",
+      problem: "Keyboard beberapa tombol tidak merespon",
+      notes: "Akun demo: demo@gmail.com (0812-9999-0001)",
+      date: "2026-10-24",
+      time: "10:30",
+    },
+    isCustomerOrder: true,
+  },
   {
     code: "BRK-2026-0142",
     technician: memoryTechnicians[0],

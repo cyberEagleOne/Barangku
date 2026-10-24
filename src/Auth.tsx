@@ -7,7 +7,6 @@ import {
   Eye,
   EyeOff,
   Info,
-  ShieldCheck,
   X,
 } from "lucide-react"
 
@@ -34,17 +33,17 @@ export function isProtectedRoute(route: string) {
 }
 
 export function safeReturnRoute(value: string | null) {
-  if (!value) return "pesanan-saya"
+  if (!value) return "cara-kerja"
 
   if (
-    /^(?:pesan\/\d+|lacak\/[A-Za-z0-9-]+|pesanan-saya|profil|dashboard-tukang|pesanan-tukang\/[A-Za-z0-9-]+|untuk-tukang|daftar-tukang)$/.test(
+    /^(?:pesan\/\d+|lacak\/[A-Za-z0-9-]+|pesanan-saya|cara-kerja|profil|dashboard-tukang|pesanan-tukang\/[A-Za-z0-9-]+|untuk-tukang|daftar-tukang)$/.test(
       value,
     )
   ) {
     return value
   }
 
-  return "pesanan-saya"
+  return "cara-kerja"
 }
 
 export function validateLogin(identity: string, password: string) {
@@ -54,7 +53,7 @@ export function validateLogin(identity: string, password: string) {
       : !emailLooksValid(identity) && !phoneLooksValid(identity)
         ? "Tulis email atau nomor HP yang benar ya."
         : "",
-    password: password.length < 8 ? "Kata sandi minimal 8 karakter." : "",
+    password: password.length < 6 ? "Kata sandi minimal 6 karakter." : "",
   }
 }
 
@@ -119,14 +118,6 @@ function AuthCard({
         <h2>{title}</h2>
         <p className="auth-subtitle">{subtitle}</p>
         {children}
-        <div className="auth-demo-note">
-          <ShieldCheck size={16} />
-          <p>
-            Ini akun demo. Pakai data contoh ya.
-            <br />
-            Kata sandi kamu tidak disimpan.
-          </p>
-        </div>
       </section>
     </main>
   )
@@ -263,7 +254,7 @@ export default function Auth({
         ? destination
         : loginRole === "tukang"
           ? "dashboard-tukang"
-          : "pesanan-saya"
+          : "cara-kerja"
 
       onLogin(loggedUser, dest)
     } catch (err: any) {
@@ -337,6 +328,7 @@ export default function Auth({
               onClick={() => setLoginRole("tukang")}
             />
           </div>
+
           <form
             className="auth-form"
             noValidate
@@ -348,7 +340,11 @@ export default function Auth({
             <Field
               name="identity"
               label="Email atau nomor HP"
-              placeholder="Contoh: rina@email.com atau 0812-0000-0000"
+              placeholder={
+                loginRole === "pelanggan"
+                  ? "Contoh: demo@gmail.com atau 0812-9999-0001"
+                  : "Contoh: dedi@barangku.id atau 0812-0000-0000"
+              }
               autoComplete="username"
               value={identity}
               onValueChange={(v) => {
@@ -421,14 +417,14 @@ export default function Auth({
             <Field
               label="Email"
               type="email"
-              placeholder="Contoh: rina@email.com"
+              placeholder="Contoh: demo@gmail.com"
               autoComplete="email"
               {...registerField("email")}
             />
             <Field
               label="Nomor HP"
               type="tel"
-              placeholder="Contoh: 0812-0000-0000"
+              placeholder="Contoh: 0812-9999-0001"
               autoComplete="tel"
               {...registerField("phone")}
             />
@@ -511,12 +507,11 @@ export default function Auth({
           </Button>
         </div>
         <p>
-          Ini prototipe barangku. Akun, pesanan, dan kontak hanya contoh; belum
-          ada layanan atau pembayaran sungguhan.
+          Barangku adalah platform perbaikan elektronik terpercaya di Tangerang. Akun demo
+          disediakan untuk menguji seluruh fitur pemesanan, pelacakan, dan ulasan secara langsung.
         </p>
         <p className="terms-dialog-note">
-          Kamu tidak perlu memasukkan data pribadi atau kata sandi asli. Biaya
-          servis nantinya disepakati langsung dengan tukang sebelum perbaikan.
+          Kamu dapat masuk langsung menggunakan akun demo <strong>demo@gmail.com</strong> (kata sandi: <strong>password123</strong>) atau mendaftarkan akun baru. Seluruh kata sandi dienkripsi aman menggunakan bcrypt.
         </p>
       </dialog>
     </AuthCard>
