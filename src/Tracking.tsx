@@ -115,6 +115,8 @@ export function TrackingContent({
   navigate: (path: string) => void
 }) {
   const { technician: t, details } = order
+  const estimateMin = order.estimateMin ?? t.min
+  const estimateMax = order.estimateMax ?? t.max
 
   const history = getRepairHistory(order, current)
 
@@ -248,7 +250,7 @@ export function TrackingContent({
                   {current === 5 ? "Biaya servis contoh" : "Perkiraan biaya"}
                 </small>
                 <strong>
-                  {rupiah(t.min)} – {rupiah(t.max)}
+                  {rupiah(estimateMin)} – {rupiah(estimateMax)}
                 </strong>
                 <p>Biaya dikonfirmasi sebelum perbaikan.</p>
               </div>

@@ -150,12 +150,12 @@ export default function MyOrders({
                   <strong>Kabar:</strong> “{(order as any).message}”
                 </p>
               )}
-              {order.technician.min > 0 && status !== -1 && (
+              {(order.estimateMin ?? order.technician.min) > 0 && status !== -1 && (
                 <p className="my-order-estimate">
                   Perkiraan:{" "}
                   <strong>
-                    Rp {order.technician.min.toLocaleString("id-ID")} – Rp{" "}
-                    {order.technician.max.toLocaleString("id-ID")}
+                    Rp {(order.estimateMin ?? order.technician.min).toLocaleString("id-ID")} – Rp{" "}
+                    {(order.estimateMax ?? order.technician.max).toLocaleString("id-ID")}
                   </strong>
                 </p>
               )}

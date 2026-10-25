@@ -35,13 +35,12 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function login(
   identity: string,
   password?: string,
-  role: UserRole = "pelanggan",
 ): Promise<User> {
   const res = await apiFetch<{ user: User; token: string }>(
     "/api/auth/login",
     {
       method: "POST",
-      body: JSON.stringify({ identity, password, role }),
+      body: JSON.stringify({ identity, password }),
     },
   )
 

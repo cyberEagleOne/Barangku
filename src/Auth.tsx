@@ -12,7 +12,7 @@ import {
 
 import { Button, Chip, Field } from "./DesignSystem"
 
-import { login, register, requestPasswordReset, type User } from "./api"
+import { login, register, requestPasswordReset, type User, type UserRole } from "./api"
 
 export type DemoUser = User
 
@@ -44,6 +44,20 @@ export function safeReturnRoute(value: string | null) {
   }
 
   return "cara-kerja"
+}
+
+export function accountLandingRoute(role: UserRole, next?: string | null) {
+  const requested = next ? safeReturnRoute(next) : null
+
+  if (role === "tukang") {
+    return requested && isTechnicianRoute(requested)
+      ? requested
+      : "dashboard-tukang"
+  }
+
+  return requested && !isTechnicianRoute(requested)
+    ? requested
+    : "cara-kerja"
 }
 
 export function validateLogin(identity: string, password: string) {
@@ -190,16 +204,6 @@ export default function Auth({
 
   const [loginErrors, setLoginErrors] = useState({ identity: "", password: "" })
 
-  const isTechnicianTarget =
-    !!next &&
-    (next.includes("dashboard-tukang") ||
-      next.includes("pesanan-tukang") ||
-      next.includes("tukang"))
-
-  const [loginRole, setLoginRole] = useState<"pelanggan" | "tukang">(
-    isTechnicianTarget ? "tukang" : "pelanggan",
-  )
-
   const [role, setRole] = useState<"pelanggan" | "tukang">("pelanggan")
 
   const [values, setValues] = useState<RegisterValues>({
@@ -248,13 +252,9 @@ export default function Auth({
     setApiError("")
 
     try {
-      const loggedUser = await login(identity, password, loginRole)
+      const loggedUser = await login(identity, password)
 
-      const dest = next
-        ? destination
-        : loginRole === "tukang"
-          ? "dashboard-tukang"
-          : "cara-kerja"
+      const dest = accountLandingRoute(loggedUser.role, next)
 
       onLogin(loggedUser, dest)
     } catch (err: any) {
@@ -316,19 +316,6 @@ export default function Auth({
     >
       {mode === "masuk" ? (
         <>
-          <div className="auth-role chips">
-            <Chip
-              label="Aku pelanggan"
-              selected={loginRole === "pelanggan"}
-              onClick={() => setLoginRole("pelanggan")}
-            />
-            <Chip
-              label="Aku tukang"
-              selected={loginRole === "tukang"}
-              onClick={() => setLoginRole("tukang")}
-            />
-          </div>
-
           <form
             className="auth-form"
             noValidate
@@ -340,11 +327,7 @@ export default function Auth({
             <Field
               name="identity"
               label="Email atau nomor HP"
-              placeholder={
-                loginRole === "pelanggan"
-                  ? "Contoh: demo@gmail.com atau 0812-9999-0001"
-                  : "Contoh: dedi@barangku.id atau 0812-0000-0000"
-              }
+              placeholder="Email atau nomor HP yang terdaftar"
               autoComplete="username"
               value={identity}
               onValueChange={(v) => {

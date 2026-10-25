@@ -637,8 +637,9 @@ export default function Booking({
               </div>
               <OrderSummary order={order} />
               <p className="prototype-note">
-                Ini pesanan contoh untuk prototipe. Belum dikirim ke tukang
-                asli.
+                Pesanan tercatat di prototipe Barangku. Tukang belum menerima
+                notifikasi otomatis, jadi jadwal dan biaya tetap perlu
+                dikonfirmasi langsung.
               </p>
             </div>
           )}

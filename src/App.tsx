@@ -32,10 +32,10 @@ import Tracking from "./Tracking"
 import Booking from "./Booking"
 
 import Auth, {
+  accountLandingRoute,
   ForgotPassword,
   isProtectedRoute,
   isTechnicianRoute,
-  safeReturnRoute,
 } from "./Auth"
 
 import {
@@ -803,7 +803,7 @@ export default function App() {
           Sedang masuk sebagai <strong>{user.name}</strong> ({user.email || user.contact}).
         </p>
         <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px", flexWrap: "wrap" }}>
-          <Button onClick={() => go(safeReturnRoute(next ?? null))}>
+          <Button onClick={() => go(accountLandingRoute(user.role, next))}>
             Lanjut ke {user.role === "tukang" ? "Dashboard" : "Cara Kerja"} <ArrowRight size={18} />
           </Button>
           <Button variant="secondary" onClick={logout}>
