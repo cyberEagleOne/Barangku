@@ -8,6 +8,12 @@ import {
   Smartphone,
   CheckCircle2,
   Navigation,
+  Sparkles,
+  Copy,
+  Check,
+  Clock,
+  Gift,
+  Tag,
 } from "lucide-react"
 
 import { Button, Field, TechnicianCard, ReviewItem } from "./DesignSystem"
@@ -25,6 +31,8 @@ import {
   type Review,
   type Technician,
 } from "./api"
+
+import { PROMOTIONS } from "./promotions"
 
 export default function Home({
   technicians: propTechnicians,
@@ -54,6 +62,16 @@ export default function Home({
   const [loading, setLoading] = useState(!propTechnicians?.length)
 
   const [error, setError] = useState("")
+
+  const [copiedPromo, setCopiedPromo] = useState<string | null>(null)
+
+  const handleCopyPromo = (code: string) => {
+    navigator.clipboard?.writeText(code)
+    setCopiedPromo(code)
+    setTimeout(() => {
+      setCopiedPromo((prev) => (prev === code ? null : prev))
+    }, 2500)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -331,6 +349,121 @@ export default function Home({
               dicek bareng dan berfungsi normal kembali.
             </p>
           </article>
+        </div>
+      </section>
+
+      {/* 2.5. Halaman/Bagian Promosi Spesial */}
+      <section id="promo-section" className="home-section home-promo-section">
+        <div className="section-header promo-header-flex">
+          <div>
+            <div className="eyebrow">
+              <span className="eyebrow-line" /> PROMO &amp; HEMAT BARENG
+            </div>
+            <h2>Promo &amp; Diskon Spesial Servis</h2>
+            <p>
+              Benerin gadget lebih hemat dengan kupon potongan harga dan voucher
+              khusus kawasan Tangerang Raya.
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            className="view-all-promo-btn"
+            onClick={() => navigate("promo")}
+          >
+            <span>Semua Promo ({PROMOTIONS.length})</span>
+            <ArrowRight size={18} />
+          </Button>
+        </div>
+
+        <div className="home-promo-grid">
+          {PROMOTIONS.filter((p) => p.isFeatured)
+            .slice(0, 3)
+            .map((promo) => {
+              const isCopied = copiedPromo === promo.code
+
+              return (
+                <article key={promo.id} className="home-promo-card">
+                  <div className="home-promo-card-top">
+                    <div className="home-promo-badges">
+                      <span className="promo-badge-tag">{promo.categoryLabel}</span>
+                      <span className="promo-badge-highlight">{promo.badge}</span>
+                    </div>
+                    <strong className="home-promo-discount">{promo.discount}</strong>
+                    <h3>{promo.title}</h3>
+                    <p>{promo.description}</p>
+                  </div>
+
+                  <div className="home-promo-separator">
+                    <div className="promo-notch notch-left" />
+                    <div className="promo-dash" />
+                    <div className="promo-notch notch-right" />
+                  </div>
+
+                  <div className="home-promo-card-bottom">
+                    <div className="home-promo-meta">
+                      <Clock size={14} />
+                      <span>s/d {promo.validUntil}</span>
+                      <span className="promo-meta-dot">•</span>
+                      <span>Sisa {promo.remainingQuota} kupon</span>
+                    </div>
+
+                    <div className="home-promo-action-row">
+                      <div className="home-promo-code">
+                        <small>KODE PROMO</small>
+                        <code>{promo.code}</code>
+                      </div>
+                      <button
+                        type="button"
+                        className={`btn-salin-kode ${isCopied ? "copied" : ""}`}
+                        onClick={() => handleCopyPromo(promo.code)}
+                        aria-label={`Salin kode promo ${promo.code}`}
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check size={15} />
+                            <span>Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={15} />
+                            <span>Salin</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      className="home-promo-use-btn"
+                      onClick={() => {
+                        handleCopyPromo(promo.code)
+                        navigate("hasil-pencarian")
+                      }}
+                    >
+                      <span>Pakai Kupon</span>
+                      <ArrowRight size={16} />
+                    </Button>
+                  </div>
+                </article>
+              )
+            })}
+        </div>
+
+        {/* Banner Tambahan Promo */}
+        <div className="home-promo-strip">
+          <div className="promo-strip-icon">
+            <Gift size={22} />
+          </div>
+          <div className="promo-strip-text">
+            <strong>Punya voucher lain atau kartu pelajar?</strong>
+            <p>
+              Dapatkan potongan biaya servis hingga Rp 50.000 dan gratis jemput-antar
+              di BSD, Karawaci, Serpong, dan sekitarnya.
+            </p>
+          </div>
+          <Button variant="ghost" onClick={() => navigate("promo")}>
+            Lihat Halaman Promo Lengkap <ArrowRight size={16} />
+          </Button>
         </div>
       </section>
 

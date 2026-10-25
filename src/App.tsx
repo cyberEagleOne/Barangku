@@ -49,6 +49,8 @@ import MyOrders from "./MyOrders"
 
 import Home from "./Home"
 
+import Promo from "./Promo"
+
 import UntukTukang from "./UntukTukang"
 
 import DaftarTukang from "./DaftarTukang"
@@ -875,6 +877,7 @@ export default function App() {
     content = <PesananTukang key={route} code={code} navigate={go} />
   } else if (page === "beranda" || page === "cara-kerja")
     content = <Home navigate={go} />
+  else if (page === "promo") content = <Promo navigate={go} />
   else if (page.startsWith("detail/"))
     content = (
       <TechnicianDetail
@@ -916,15 +919,17 @@ export default function App() {
         onLink={(label) =>
           label === "Cari tukang"
             ? go("hasil-pencarian")
-            : label === "Cara kerja"
-              ? (go("beranda"),
-                setTimeout(
-                  () =>
-                    document
-                      .getElementById("cara-kerja")
-                      ?.scrollIntoView({ behavior: "smooth" }),
-                  120,
-                ))
+            : label === "Promo & Diskon"
+              ? go("promo")
+              : label === "Cara kerja"
+                ? (go("beranda"),
+                  setTimeout(
+                    () =>
+                      document
+                        .getElementById("cara-kerja")
+                        ?.scrollIntoView({ behavior: "smooth" }),
+                    120,
+                  ))
               : label === "Jadi tukang"
                 ? go("untuk-tukang")
                 : setNotice(

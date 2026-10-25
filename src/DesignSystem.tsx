@@ -546,7 +546,7 @@ export function Footer({ onLink }: { onLink: (label: string) => void }) {
           </p>
         </div>
         {[
-          ["Jelajahi", "Cari tukang", "Cara kerja", "Jadi tukang"],
+          ["Jelajahi", "Cari tukang", "Promo & Diskon", "Cara kerja", "Jadi tukang"],
           [
             "Bantuan",
             "Pertanyaan umum",
@@ -655,6 +655,10 @@ export function Navbar({
         >
           <a href="#cara-kerja" onClick={onCaraKerja}>
             Cara Kerja
+          </a>
+          <a href="#promo" onClick={close} className="nav-promo-link">
+            Promo
+            <span className="nav-promo-tag">Diskon</span>
           </a>
           <a href="#untuk-tukang" onClick={close}>
             Untuk Tukang
